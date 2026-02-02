@@ -10,7 +10,18 @@
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #fdfaf5; }
         #map { width: 100vw; height: 100vh; }
 
-        /* UI 標籤優化：增加微陰影讓質感更好 */
+        /* 極致精緻的小圓點：強制固定 6 像素 */
+        .gmap-dot {
+            background-color: #FFBF00 !important; /* 強制琥珀色 */
+            border: 1px solid #FFFFFF !important; /* 白色細邊框 */
+            border-radius: 50% !important;
+            width: 6px !important;  /* 縮小到 6px，更精緻 */
+            height: 6px !important; 
+            display: block !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* 輕微投影 */
+        }
+
+        /* 標籤樣式 */
         .ui-overlay {
             position: absolute;
             top: 20px;
@@ -23,15 +34,14 @@
             justify-content: center;
         }
         .tag {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 6px 12px;
+            background: white;
+            padding: 5px 12px;
             border-radius: 20px;
-            font-size: 13px;
+            font-size: 12px;
             border: 1px solid #FFBF00;
             color: #D28E5D;
-            font-weight: 600;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            white-space: nowrap;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
     </style>
 </head>
@@ -50,25 +60,25 @@
         var map = L.map('map', { 
             zoomControl: false, 
             attributionControl: false 
-        }).setView([25.056, 121.511], 16); // 稍微放大一點點
+        }).setView([25.056, 121.511], 16);
 
-        // 使用 CartoDB 的淺色乾淨底圖
+        // 使用淺色底圖
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-        // 設定 200 個更小、更密集的點來測試「疏密度形成的光暈」
-        for (var i = 0; i < 200; i++) {
-            // 讓點點集中在大稻埕核心區
-            var lat = 25.056 + (Math.random() - 0.5) * 0.01;
-            var lng = 121.511 + (Math.random() - 0.5) * 0.01;
+        // 定義 CSS 固定大小圖標
+        var amberIcon = L.divIcon({
+            className: 'none', // 移除預設樣式
+            html: '<div class="gmap-dot"></div>',
+            iconSize: [6, 6],
+            iconAnchor: [3, 3]
+        });
 
-            L.circleMarker([lat, lng], {
-                radius: 5,            // 固定大小的小圓點，像 GMaps 的點
-                fillColor: "#FFBF00", // 琥珀金
-                color: "#FFFFFF",     // 白色極細邊框，增加精緻感
-                weight: 1,            // 邊框粗細
-                opacity: 0.8,         // 邊框透明度
-                fillOpacity: 0.6      // 填充透明度
-            }).addTo(map);
+        // 撒下 400 個小琥珀點
+        for (var i = 0; i < 400; i++) {
+            var lat = 25.056 + (Math.random() - 0.5) * 0.012;
+            var lng = 121.511 + (Math.random() - 0.5) * 0.012;
+
+            L.marker([lat, lng], { icon: amberIcon }).addTo(map);
         }
     </script>
 </body>
