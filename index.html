@@ -7,10 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { margin: 0; padding: 0; font-family: sans-serif; }
-        #map { width: 100%; height: 100vh; background: #f0f0f0; }
-        
-        /* 頂部 Tags 欄 */
+        body { margin: 0; padding: 0; font-family: sans-serif; background: #F2EFE9; }
         .header-ui {
             position: absolute; top: 0; left: 0; right: 0; z-index: 1000;
             background: rgba(255, 255, 255, 0.9); padding: 10px;
@@ -20,15 +17,12 @@
             padding: 6px 15px; border-radius: 20px; border: 1.5px solid #D28E5D;
             color: #D28E5D; font-size: 13px; white-space: nowrap; background: white;
         }
-
-        /* 琥珀光暈點點樣式 */
-        .amber-glow-point {
-            background: rgba(255, 193, 7, 0.5); /* 妳要求的透明黃點 */
+        #map { width: 100%; height: 100vh; }
+        .amber-dot {
+            background: rgba(255, 193, 7, 0.5); /* 透明黃點，密集會變琥珀色 */
             border-radius: 50%;
-            border: 1px solid rgba(255, 152, 0, 0.3);
+            border: none;
         }
-
-        /* 貢獻按鈕 */
         .contribute-btn {
             position: absolute; bottom: 30px; right: 20px; z-index: 1000;
             background: #5D4037; color: white; padding: 15px 25px;
@@ -38,48 +32,26 @@
     </style>
 </head>
 <body>
-
     <div class="header-ui">
         <div class="tag" style="background: #D28E5D; color: white;">📍 全部設施</div>
-        <div class="tag">🌡️ 熱水機</div>
-        <div class="tag">🍼 尿布台</div>
-        <div class="tag">♿ 斜坡</div>
-        <div class="tag">🛗 電梯</div>
+        <div class="tag">🌡️ 熱水機</div><div class="tag">🍼 尿布台</div>
+        <div class="tag">♿ 斜坡</div><div class="tag">🛗 電梯</div>
     </div>
-
     <div id="map"></div>
-
-    <a href="#" class="contribute-btn" onclick="alert('感謝貢獻！點數已入帳，可至個人中心兌換寫真書版型。')">
-        + 貢獻設施 (Glowy Points)
-    </a>
-
+    <a href="#" class="contribute-btn" onclick="alert('感謝貢獻！累積 Glowy Points 可兌換寫真書版型。')">+ 貢獻設施</a>
     <script>
-        // 初始化地圖，設定在台北大稻埕附近
         var map = L.map('map').setView([25.056, 121.511], 16);
-
-        // 使用淺色系地圖底層 (比較配妳的莫蘭迪色系)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
-
-        // 模擬「設施點點」：在附近隨機灑下琥珀點
-        // 當點點靠近時，透明度疊加就會產生妳說的光暈感
-        for (let i = 0; i < 100; i++) {
-            var lat = 25.056 + (Math.random() - 0.5) * 0.01;
-            var lng = 121.511 + (Math.random() - 0.5) * 0.01;
-            
-            L.circleMarker([lat, lng], {
-                radius: 12,
-                className: 'amber-glow-point',
-                stroke: false,
-                fillOpacity: 0.5
-            }).addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+        
+        // 模擬 150 個帶透明度的點點，當它們重疊時會形成琥珀光暈
+        for (let i = 0; i < 150; i++) {
+            var lat = 25.056 + (Math.random() - 0.5) * 0.012;
+            var lng = 121.511 + (Math.random() - 0.5) * 0.012;
+            L.circleMarker([lat, lng], { radius: 12, className: 'amber-dot', stroke: false, fillOpacity: 0.5 }).addTo(map);
         }
-
-        // 放置一個藝文活動「寶」
-        var eventIcon = L.divIcon({ html: '🎨', className: 'event-icon', iconSize: [30, 30] });
-        L.marker([25.0565, 121.512], { icon: eventIcon }).addTo(map)
-            .bindPopup("<b>大稻埕老宅展</b><br>設施完善度：高 (琥珀光暈密集)");
+        // 藝文活動「寶」
+        L.marker([25.0565, 121.512], { icon: L.divIcon({ html: '🎨', className: 'event-icon', iconSize: [30, 30] }) }).addTo(map)
+            .bindPopup("<b>大稻埕老宅展</b><br>設施完善度：高");
     </script>
 </body>
 </html>
