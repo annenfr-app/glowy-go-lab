@@ -2,49 +2,84 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Glowy GO ! 實驗室</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glowy GO ! 實境地圖</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: sans-serif; }
+        #map { width: 100%; height: 100vh; background: #f0f0f0; }
+        
+        /* 頂部 Tags 欄 */
+        .header-ui {
+            position: absolute; top: 0; left: 0; right: 0; z-index: 1000;
+            background: rgba(255, 255, 255, 0.9); padding: 10px;
+            display: flex; gap: 8px; overflow-x: auto; border-bottom: 1px solid #ddd;
+        }
+        .tag {
+            padding: 6px 15px; border-radius: 20px; border: 1.5px solid #D28E5D;
+            color: #D28E5D; font-size: 13px; white-space: nowrap; background: white;
+        }
+
+        /* 琥珀光暈點點樣式 */
+        .amber-glow-point {
+            background: rgba(255, 193, 7, 0.5); /* 妳要求的透明黃點 */
+            border-radius: 50%;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+        }
+
+        /* 貢獻按鈕 */
+        .contribute-btn {
+            position: absolute; bottom: 30px; right: 20px; z-index: 1000;
+            background: #5D4037; color: white; padding: 15px 25px;
+            border-radius: 40px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            text-decoration: none; font-size: 14px;
+        }
+    </style>
 </head>
-<div style="width: 100%; text-align: center; padding: 40px 0 20px 0;">
-    <h1 style="color: #5D6D5D; font-size: 28px; letter-spacing: 2px;">Glowy GO !</h1>
-    <p style="color: #888; font-size: 18px; margin-top: 10px;">今天想去哪兒玩呢？</p>
-</div>
-<body style="font-family: sans-serif; display: flex; flex-wrap: wrap; gap: 25px; padding: 30px; background: #F2EFE9; justify-content: center;">
+<body>
 
-    <div style="background: #F5F5F5; width: 280px; min-height: 400px; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #eee;">
-        <h3 style="font-family: serif; color: #444; margin-top: 0;">L'Art de Vivre</h3>
-        <div style="background: #e0e0e0; height: 180px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; color: #888;">美術館雕塑公園</div>
-        <p style="color: #666; font-size: 14px;">風格：法式簡約 - 米白</p>
-        <button onclick="alert('🕊️ 採集成功：白色極簡草地！這裡非常安靜，適合推嬰兒車漫步。')" 
-                style="width: 100%; padding: 12px; background: white; border: 1px solid #ddd; border-radius: 25px; cursor: pointer; font-weight: bold; margin-top: 10px;">
-            🕊️ 捕捉：白色極簡草地
-        </button>
+    <div class="header-ui">
+        <div class="tag" style="background: #D28E5D; color: white;">📍 全部設施</div>
+        <div class="tag">🌡️ 熱水機</div>
+        <div class="tag">🍼 尿布台</div>
+        <div class="tag">♿ 斜坡</div>
+        <div class="tag">🛗 電梯</div>
     </div>
 
-    <div style="background: #849483; width: 280px; min-height: 400px; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); color: white;">
-        <h3 style="margin-top: 0;">Nordic Forest</h3>
-        <iframe 
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3614.902361623861!2d121.561848315006!3d25.0339638839724!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3442abb6da80a7ad%3A0xacc4d11ad9651341!2z5Y-w5YyXMTAx!5e0!3m2!1szh-TW!2stw!4v1620000000000!5m2!1zh-TW!2stw" 
-            width="100%" height="180" style="border:0; border-radius: 8px; margin-bottom: 15px;" allowfullscreen="" loading="lazy">
-        </iframe>
-        <p style="font-size: 14px; opacity: 0.9;">風格：北歐森林 - 雲杉綠</p>
-        <button onclick="alert('🌲 採集成功：雲杉森林呼吸！此處有完善育嬰室，光線柔和，適合寶寶午睡。')" 
-                style="width: 100%; padding: 12px; background: #E9EDC9; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; color: #4A5D4A; margin-top: 10px;">
-            🍼 採集：繪本故事森林
-        </button>
-    </div>
+    <div id="map"></div>
 
-    <div style="background: #D2B48C; width: 280px; min-height: 400px; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-        <h3 style="font-family: 'Comic Sans MS', cursive; margin-top: 0;">Memory Lane</h3>
-        <div style="background: white; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
-            <div style="background: #bbb; height: 140px; border-radius: 3px;"></div>
-            <p style="text-align: center; margin: 5px 0 0 0; font-family: cursive; font-size: 12px;">2024.02.02 Memories</p>
-        </div>
-        <p style="font-size: 14px;">風格：台灣復古 - 牛皮紙</p>
-        <button onclick="alert('🏮 採集成功：百年紅磚時光！這裡的地磚很有質感，帶寶寶來拍拍立得超美。')" 
-                style="width: 100%; padding: 12px; background: #5D4037; color: white; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; margin-top: 10px;">
-            🏮 捕捉：大稻埕老宅
-        </button>
-    </div>
+    <a href="#" class="contribute-btn" onclick="alert('感謝貢獻！點數已入帳，可至個人中心兌換寫真書版型。')">
+        + 貢獻設施 (Glowy Points)
+    </a>
 
+    <script>
+        // 初始化地圖，設定在台北大稻埕附近
+        var map = L.map('map').setView([25.056, 121.511], 16);
+
+        // 使用淺色系地圖底層 (比較配妳的莫蘭迪色系)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // 模擬「設施點點」：在附近隨機灑下琥珀點
+        // 當點點靠近時，透明度疊加就會產生妳說的光暈感
+        for (let i = 0; i < 100; i++) {
+            var lat = 25.056 + (Math.random() - 0.5) * 0.01;
+            var lng = 121.511 + (Math.random() - 0.5) * 0.01;
+            
+            L.circleMarker([lat, lng], {
+                radius: 12,
+                className: 'amber-glow-point',
+                stroke: false,
+                fillOpacity: 0.5
+            }).addTo(map);
+        }
+
+        // 放置一個藝文活動「寶」
+        var eventIcon = L.divIcon({ html: '🎨', className: 'event-icon', iconSize: [30, 30] });
+        L.marker([25.0565, 121.512], { icon: eventIcon }).addTo(map)
+            .bindPopup("<b>大稻埕老宅展</b><br>設施完善度：高 (琥珀光暈密集)");
+    </script>
 </body>
 </html>
