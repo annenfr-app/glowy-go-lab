@@ -3,89 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Glowy GO ! 琥珀地圖專案</title>
+    <title>Glowy GO ! 全國琥珀地圖</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #fdfaf5; }
         #map { width: 100vw; height: 100vh; }
-
-        /* 絕對固定尺寸的琥珀點點 CSS */
         .gmap-dot {
             background-color: #FFBF00 !important;
             border: 1px solid #FFFFFF !important;
             border-radius: 50% !important;
-            width: 6px !important; 
-            height: 6px !important; 
+            width: 8px !important; height: 8px !important;
             display: block !important;
             box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
-
-        /* UI 標籤：預留未來互動功能 */
         .ui-overlay {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 1000; display: flex; gap: 8px; width: 95%; justify-content: center;
+            z-index: 1000; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 90%;
         }
         .tag {
             background: white; padding: 6px 14px; border-radius: 20px; font-size: 13px;
-            border: 1.5px solid #FFBF00; color: #D28E5D; font-weight: bold;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer;
+            border: 1px solid #FFBF00; color: #D28E5D; font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
+        #status-tag { font-size: 11px; background: rgba(255,191,0,0.1); }
     </style>
 </head>
 <body>
 
     <div class="ui-overlay">
-        <div class="tag" onclick="filterType('diaper')">🍼 尿布台</div>
-        <div class="tag" onclick="filterType('slope')">♿ 斜坡</div>
-        <div class="tag" onclick="filterType('cafe')">☕ 親子友善</div>
+        <div class="tag">🍼 全國哺集乳室動態地圖</div>
+        <div id="status-tag" class="tag">正在連線政府資料庫...</div>
     </div>
 
     <div id="map"></div>
 
     <script>
         // 1. 初始化地圖
-        var map = L.map('map', { 
-            zoomControl: false, 
-            attributionControl: false 
-        }).setView([25.056, 121.511], 16);
-
+        var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([25.056, 121.511], 15);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-        // 2. 定義標籤圖標
         var amberIcon = L.divIcon({
             className: 'none',
             html: '<div class="gmap-dot"></div>',
-            iconSize: [6, 6],
-            iconAnchor: [3, 3]
+            iconSize: [8, 8], iconAnchor: [4, 4]
         });
 
-        // 3. 【核心資料庫】未來就在這裡增加或匯入真實的大稻埕地點
-        var spots = [
-            { name: "迪化街遊客中心", lat: 25.0562, lng: 121.5108, type: "diaper" },
-            { name: "永樂市場", lat: 25.0552, lng: 121.5112, type: "diaper" },
-            { name: "大稻埕碼頭公園", lat: 25.0568, lng: 121.5078, type: "slope" },
-            { name: "台北霞海城隍廟周邊", lat: 25.0556, lng: 121.5105, type: "cafe" }
-            // 這裡可以無限延伸...
-        ];
+        // 2. 串接全國開放資料 (使用衛福部公開資料)
+        const dataUrl = 'https://raw.githubusercontent.com/kiang/nurseries/master/data.json';
 
-        // 4. 渲染引擎：將資料庫中的點畫到地圖上
-        function renderSpots(data) {
-            data.forEach(function(spot) {
-                L.marker([spot.lat, spot.lng], { icon: amberIcon })
-                 .bindPopup("<b>" + spot.name + "</b>") // 點擊點點會顯示名稱
-                 .addTo(map);
-            });
+        async function loadData() {
+            try {
+                const response = await fetch(dataUrl);
+                const data = await response.json();
+                const statusTag = document.getElementById('status-tag');
+                
+                // 3. 處理並顯示資料
+                let count = 0;
+                data.features.forEach(feature => {
+                    const coords = feature.geometry.coordinates;
+                    const info = feature.properties;
+                    
+                    // 經緯度反轉 (OpenData 通常是 [經, 緯]，Leaflet 是 [緯, 經])
+                    L.marker([coords[1], coords[0]], { icon: amberIcon })
+                     .bindPopup(`<b>${info.name}</b><br>${info.address}<br>開放時間: ${info.opening_hours || '詳見官網'}`)
+                     .addTo(map);
+                    count++;
+                });
+
+                statusTag.innerText = `已點亮全國 ${count} 處琥珀空間`;
+            } catch (error) {
+                console.error("抓取資料失敗:", error);
+                document.getElementById('status-tag').innerText = "連線失敗，請稍後再試";
+            }
         }
 
-        // 執行初次渲染
-        renderSpots(spots);
+        // 啟動載入
+        loadData();
 
-        // 5. 預留功能：未來點擊標籤可以過濾地點
-        function filterType(type) {
-            console.log("正在過濾類型：" + type);
-            // 這裡未來會加入切換顯示/隱藏標記的邏輯
-        }
+        // 4. 自動定位到使用者位置
+        map.locate({setView: true, maxZoom: 15});
     </script>
 </body>
 </html>
