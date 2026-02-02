@@ -1,27 +1,91 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glowy GO ! 琥珀光暈地圖</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Glowy GO ! 琥珀光暈實驗室</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { margin: 0; padding: 0; background: #F2EFE9; }
+        /* 讓地圖填滿整個螢幕 */
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #fdfaf5; }
         #map { width: 100vw; height: 100vh; }
-        .amber-dot { background: rgba(255, 193, 7, 0.6); border-radius: 50%; box-shadow: 0 0 10px rgba(255, 193, 7, 0.4); }
+
+        /* 上方的分類標籤樣式 */
+        .ui-overlay {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            width: 90%;
+            justify-content: center;
+        }
+        .tag {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 15px;
+            border-radius: 25px;
+            font-size: 14px;
+            border: 1.5px solid #FFBF00;
+            color: #D28E5D;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            white-space: nowrap;
+        }
+
+        /* 自定義琥珀點點的發光效果 */
+        .amber-glow {
+            filter: blur(1px);
+        }
     </style>
 </head>
 <body>
+
+    <div class="ui-overlay">
+        <div class="tag">🍼 尿布台</div>
+        <div class="tag">♿ 斜坡</div>
+        <div class="tag">☕ 親子友善</div>
+    </div>
+
     <div id="map"></div>
+
     <script>
-        var map = L.map('map').setView([25.056, 121.511], 15);
+        // 1. 初始化地圖，設定座標在大稻埕 (25.056, 121.511)
+        var map = L.map('map', { 
+            zoomControl: false, // 隱藏左上角正負號，介面更乾淨
+            attributionControl: false 
+        }).setView([25.056, 121.511], 15);
+
+        // 2. 使用淺色乾淨的地圖底圖
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+        // 3. 產生 100 個琥珀光暈點
         for (var i = 0; i < 100; i++) {
+            // 在中心點附近隨機產生座標
             var lat = 25.056 + (Math.random() - 0.5) * 0.015;
             var lng = 121.511 + (Math.random() - 0.5) * 0.015;
-            L.circleMarker([lat, lng], { radius: 12, className: 'amber-dot', stroke: false, fillOpacity: 0.6 }).addTo(map);
+
+            // 繪製圓圈標記
+            L.circleMarker([lat, lng], {
+                radius: 15,           // 點點的大小
+                fillColor: "#FFBF00", // 琥珀金色
+                color: "#FF8C00",     // 邊框稍微深一點
+                weight: 1,            // 邊框粗細
+                opacity: 0.2,         // 邊框透明度
+                fillOpacity: 0.4,     // 填充透明度 (重疊後會產生光暈感)
+                className: 'amber-glow'
+            }).addTo(map);
         }
+
+        // 4. 加一個大一點的核心光暈在正中心
+        L.circle([25.056, 121.511], {
+            color: 'none',
+            fillColor: '#FFBF00',
+            fillOpacity: 0.2,
+            radius: 500
+        }).addTo(map);
     </script>
 </body>
-</html> 
+</html>
