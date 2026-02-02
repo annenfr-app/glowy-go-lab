@@ -3,82 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Glowy GO ! 琥珀地圖</title>
+    <title>Glowy GO ! 琥珀地圖專案</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #fdfaf5; }
         #map { width: 100vw; height: 100vh; }
 
-        /* 極致精緻的小圓點：強制固定 6 像素 */
+        /* 絕對固定尺寸的琥珀點點 CSS */
         .gmap-dot {
-            background-color: #FFBF00 !important; /* 強制琥珀色 */
-            border: 1px solid #FFFFFF !important; /* 白色細邊框 */
+            background-color: #FFBF00 !important;
+            border: 1px solid #FFFFFF !important;
             border-radius: 50% !important;
-            width: 6px !important;  /* 縮小到 6px，更精緻 */
+            width: 6px !important; 
             height: 6px !important; 
             display: block !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* 輕微投影 */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
 
-        /* 標籤樣式 */
+        /* UI 標籤：預留未來互動功能 */
         .ui-overlay {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            display: flex;
-            gap: 8px;
-            width: 95%;
-            justify-content: center;
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 1000; display: flex; gap: 8px; width: 95%; justify-content: center;
         }
         .tag {
-            background: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            border: 1px solid #FFBF00;
-            color: #D28E5D;
-            font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            background: white; padding: 6px 14px; border-radius: 20px; font-size: 13px;
+            border: 1.5px solid #FFBF00; color: #D28E5D; font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer;
         }
     </style>
 </head>
 <body>
 
     <div class="ui-overlay">
-        <div class="tag">🍼 尿布台</div>
-        <div class="tag">♿ 斜坡</div>
-        <div class="tag">☕ 親子友善</div>
+        <div class="tag" onclick="filterType('diaper')">🍼 尿布台</div>
+        <div class="tag" onclick="filterType('slope')">♿ 斜坡</div>
+        <div class="tag" onclick="filterType('cafe')">☕ 親子友善</div>
     </div>
 
     <div id="map"></div>
 
     <script>
-        // 初始化地圖
+        // 1. 初始化地圖
         var map = L.map('map', { 
             zoomControl: false, 
             attributionControl: false 
         }).setView([25.056, 121.511], 16);
 
-        // 使用淺色底圖
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-        // 定義 CSS 固定大小圖標
+        // 2. 定義標籤圖標
         var amberIcon = L.divIcon({
-            className: 'none', // 移除預設樣式
+            className: 'none',
             html: '<div class="gmap-dot"></div>',
             iconSize: [6, 6],
             iconAnchor: [3, 3]
         });
 
-        // 撒下 400 個小琥珀點
-        for (var i = 0; i < 400; i++) {
-            var lat = 25.056 + (Math.random() - 0.5) * 0.012;
-            var lng = 121.511 + (Math.random() - 0.5) * 0.012;
+        // 3. 【核心資料庫】未來就在這裡增加或匯入真實的大稻埕地點
+        var spots = [
+            { name: "迪化街遊客中心", lat: 25.0562, lng: 121.5108, type: "diaper" },
+            { name: "永樂市場", lat: 25.0552, lng: 121.5112, type: "diaper" },
+            { name: "大稻埕碼頭公園", lat: 25.0568, lng: 121.5078, type: "slope" },
+            { name: "台北霞海城隍廟周邊", lat: 25.0556, lng: 121.5105, type: "cafe" }
+            // 這裡可以無限延伸...
+        ];
 
-            L.marker([lat, lng], { icon: amberIcon }).addTo(map);
+        // 4. 渲染引擎：將資料庫中的點畫到地圖上
+        function renderSpots(data) {
+            data.forEach(function(spot) {
+                L.marker([spot.lat, spot.lng], { icon: amberIcon })
+                 .bindPopup("<b>" + spot.name + "</b>") // 點擊點點會顯示名稱
+                 .addTo(map);
+            });
+        }
+
+        // 執行初次渲染
+        renderSpots(spots);
+
+        // 5. 預留功能：未來點擊標籤可以過濾地點
+        function filterType(type) {
+            console.log("正在過濾類型：" + type);
+            // 這裡未來會加入切換顯示/隱藏標記的邏輯
         }
     </script>
 </body>
