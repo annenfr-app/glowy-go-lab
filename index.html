@@ -12,14 +12,14 @@
         #map { height: 100vh; width: 100vw; z-index: 1; }
         .top-ui { z-index: 1001 !important; }
         
-        /* 設施琥珀點 */
-        .facility-dot { width: 12px; height: 12px; background: #FFBF00; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(255,191,0,0.6); }
+        /* 設施琥珀點 - 縮小一點以利多選顯示 */
+        .facility-dot { width: 10px; height: 10px; background: #FFBF00; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 8px rgba(255,191,0,0.6); }
 
-        /* 活動綠色光暈 */
+        /* 活動綠色光暈 - 保持搶眼 */
         .event-marker {
             width: 38px; height: 38px; background: #10B981; border: 3px solid white; border-radius: 50%;
             display: flex; align-items: center; justify-content: center; font-size: 18px; 
-            box-shadow: 0 0 25px rgba(16, 185, 129, 0.6); position: relative;
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.6); position: relative; z-index: 500;
         }
         .event-marker::after {
             content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%;
@@ -27,11 +27,9 @@
         }
         @keyframes pulse-green { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(2.5); opacity: 0; } }
 
-        .tag-active { background-color: #FFBF00 !important; color: white !important; border-color: #FFBF00 !important; }
+        /* 標籤選中樣式 */
+        .tag-active { background-color: #FFBF00 !important; color: white !important; border-color: #FFBF00 !important; transform: scale(1.05); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        
-        /* 搜尋按鈕動畫 */
-        #re-search-btn { display: none; transition: opacity 0.3s; }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -46,16 +44,15 @@
                 <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Lucky" class="w-full h-full object-cover">
             </div>
         </div>
-
-        <button id="re-search-btn" onclick="triggerManualSearch()" class="bg-white px-6 py-2.5 rounded-full shadow-2xl border border-gray-100 text-xs font-black text-gray-800 flex items-center gap-2 active:scale-95 transition-all">
-            <span>🔄</span> 搜尋此區域的設施
+        <button id="re-search-btn" onclick="refreshAllActiveTags()" class="hidden bg-white px-6 py-2.5 rounded-full shadow-2xl border border-gray-100 text-xs font-black text-gray-800 flex items-center gap-2 active:scale-95 transition-all">
+            <span>🔄</span> 搜尋此區域設施
         </button>
     </div>
 
     <div id="tag-bar" class="top-ui fixed top-32 left-0 right-0 flex gap-2 px-4 overflow-x-auto no-scrollbar">
-        <button onclick="updateFacilities('baby_care', this)" class="facility-tag flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 transition-all">🍼 哺乳室</button>
-        <button onclick="updateFacilities('toilets', this)" class="facility-tag flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 transition-all">🚾 公廁</button>
-        <button onclick="updateFacilities('drinking_water', this)" class="facility-tag flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 transition-all">💧 飲水機</button>
+        <button onclick="toggleTag('baby_care', this)" class="facility-tag flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 transition-all">🍼 哺乳室</button>
+        <button onclick="toggleTag('toilets', this)" class="facility-tag flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 transition-all">🚾 公廁</button>
+        <button onclick="toggleTag('drinking_water', this)" class="facility-tag flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 transition-all">💧 飲水機</button>
     </div>
 
     <div id="map"></div>
@@ -77,28 +74,39 @@
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([48.8566, 2.3522], 15);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-        let facilityLayer = L.layerGroup().addTo(map);
-        let currentType = null; // 紀錄當前選取的標籤類型
+        // 分層管理：活動與設施分開，互不干擾
+        let eventLayer = L.layerGroup().addTo(map);
+        let facilityLayers = {}; // 用於存放多個設施圖層 { 'toilets': L.layerGroup(), ... }
+        let activeTags = new Set(); // 紀錄目前開啟的標籤
 
-        // ✅ 當地圖移動停止時，顯示「搜尋此區域」按鈕
+        // 初始化地圖移動監聽
         map.on('moveend', () => {
-            if (currentType) {
-                document.getElementById('re-search-btn').style.display = 'flex';
-            }
+            if (activeTags.size > 0) document.getElementById('re-search-btn').style.display = 'flex';
         });
 
-        // ✅ 核心搜尋功能
-        async function updateFacilities(type, btn) {
-            currentType = type;
-            
-            // 處理標籤變色
-            document.querySelectorAll('.facility-tag').forEach(t => t.classList.remove('tag-active'));
-            if (btn) btn.classList.add('tag-active');
+        // ✅ 多選標籤切換邏輯
+        function toggleTag(type, btn) {
+            if (activeTags.has(type)) {
+                // 關閉標籤
+                activeTags.delete(type);
+                btn.classList.remove('tag-active');
+                if (facilityLayers[type]) map.removeLayer(facilityLayers[type]);
+            } else {
+                // 開啟標籤
+                activeTags.add(type);
+                btn.classList.add('tag-active');
+                fetchFacility(type);
+            }
+            // 如果沒標籤了，隱藏更新按鈕
+            if (activeTags.size === 0) document.getElementById('re-search-btn').style.display = 'none';
+        }
 
-            // 隱藏重新搜尋按鈕
-            document.getElementById('re-search-btn').style.display = 'none';
+        // ✅ 核心抓取函數
+        async function fetchFacility(type) {
+            // 建立或清除該類型的獨立圖層
+            if (!facilityLayers[type]) facilityLayers[type] = L.layerGroup().addTo(map);
+            facilityLayers[type].clearLayers();
 
-            // 執行資料抓取
             const bounds = map.getBounds();
             const query = `[out:json];node["amenity"="${type}"](${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()});out;`;
             
@@ -106,22 +114,32 @@
                 const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
                 const data = await response.json();
                 
-                facilityLayer.clearLayers();
                 data.elements.forEach(el => {
-                    const icon = L.divIcon({ className: 'facility-dot', iconSize: [12, 12] });
-                    L.marker([el.lat, el.lon], { icon }).addTo(facilityLayer);
+                    const icon = L.divIcon({ className: 'facility-dot', iconSize: [10, 10] });
+                    L.marker([el.lat, el.lon], { icon }).addTo(facilityLayers[type]);
                 });
-            } catch (e) {
-                console.error("抓取失敗", e);
-            }
+            } catch (e) { console.error("搜尋失敗", e); }
         }
 
-        // 手動觸發搜尋
-        function triggerManualSearch() {
-            updateFacilities(currentType, null);
+        // 重新搜尋此區域所有已選標籤
+        function refreshAllActiveTags() {
+            activeTags.forEach(type => fetchFacility(type));
+            document.getElementById('re-search-btn').style.display = 'none';
         }
 
-        window.onload = () => { map.locate({ setView: true }); };
+        // 渲染活動 (獨立圖層，永遠存在)
+        function renderEvents() {
+            const events = [
+                { id: 1, name: "🎨 羅浮宮活動", lat: 48.8606, lon: 2.3376 },
+                { id: 2, name: "🎈 杜樂麗活動", lat: 48.8640, lon: 2.3270 }
+            ];
+            events.forEach(evt => {
+                const icon = L.divIcon({ className: '', html: `<div class="event-marker">✨</div>`, iconSize: [38, 38] });
+                L.marker([evt.lat, evt.lon], { icon }).addTo(eventLayer);
+            });
+        }
+
+        window.onload = () => { renderEvents(); map.locate({ setView: true }); };
     </script>
 </body>
 </html>
