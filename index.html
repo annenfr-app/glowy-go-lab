@@ -3,94 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Glowy GO ! 消耗性兌換版</title>
+    <title>Glowy GO ! | 育兒導航與動態紀錄</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: sans-serif; }
+        :root { --amber: #FFBF00; --bg: #fdfaf5; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; background: var(--bg); }
+        
+        /* 地圖層 */
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
-        
-        /* 頂部帳戶條 */
-        .account-bar {
-            position: absolute; top: 10px; left: 10px; right: 10px; z-index: 1000;
-            background: rgba(255,255,255,0.9); padding: 10px 15px; border-radius: 20px;
-            display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .points-display { font-weight: bold; color: #FFBF00; cursor: pointer; }
 
-        /* 商店抽屜 */
-        #store-ui {
-            position: fixed; bottom: -70%; left: 0; width: 100%; height: 70%;
-            background: white; z-index: 2000; border-radius: 20px 20px 0 0;
-            transition: bottom 0.3s ease; box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
-            padding: 20px; box-sizing: border-box;
+        /* 用戶狀態列 */
+        .status-bar {
+            position: absolute; top: 15px; left: 15px; right: 15px; z-index: 1000;
+            background: white; padding: 12px 20px; border-radius: 30px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-        #store-ui.open { bottom: 0; }
+        .points-box { font-weight: bold; color: var(--amber); border-left: 1px solid #eee; padding-left: 15px; }
+
+        /* Memory Studio 介面 */
+        #studio {
+            position: fixed; bottom: -100%; left: 0; width: 100%; height: 80%;
+            background: white; z-index: 2000; border-radius: 25px 25px 0 0;
+            transition: bottom 0.3s ease; padding: 25px; box-sizing: border-box; overflow-y: auto;
+        }
+        #studio.open { bottom: 0; }
         
-        .skin-item {
-            border-bottom: 1px solid #eee; padding: 15px 0;
+        .card {
+            border: 1px solid #eee; border-radius: 15px; padding: 15px; margin-bottom: 15px;
             display: flex; justify-content: space-between; align-items: center;
         }
-        .btn-redeem { background: #FFBF00; color: white; border: none; padding: 8px 15px; border-radius: 15px; font-weight: bold; cursor: pointer; }
+        .tag-free { color: #2ecc71; font-size: 12px; font-weight: bold; }
+        .tag-paid { color: var(--amber); font-size: 12px; font-weight: bold; }
+        
+        .btn {
+            background: var(--amber); color: white; border: none; padding: 10px 18px;
+            border-radius: 20px; font-weight: bold; cursor: pointer;
+        }
+        .btn:disabled { background: #eee; color: #aaa; }
+        .quota-info { font-size: 11px; color: #999; margin-top: 4px; }
     </style>
 </head>
 <body>
 
-    <div class="account-bar">
-        <span>User_8824</span>
-        <div class="points-display" onclick="toggleStore()">💰 <span id="pts">25</span> 點 (商店)</div>
+    <div class="status-bar">
+        <div onclick="toggleStudio()" style="cursor:pointer">📸 精彩時刻 (Memory Studio)</div>
+        <div class="points-box">💎 <span id="pts-val">25</span> 點</div>
     </div>
 
     <div id="map"></div>
 
-    <div id="store-ui">
-        <div style="display:flex; justify-content:space-between;">
-            <h3 style="margin:0;">版型商店</h3>
-            <button onclick="toggleStore()" style="border:none; background:none; font-size:20px;">✕</button>
-        </div>
-        <p style="font-size:12px; color:red;">* 消耗 10 點可切換版型一次，切換後點數即扣除。</p>
+    <div id="studio">
+        <div style="width:40px; height:4px; background:#ddd; margin: 0 auto 20px; border-radius:2px;" onclick="toggleStudio()"></div>
         
-        <div class="skin-item">
-            <div><b>Cyberpunk 霓虹</b><br><small>單次切換</small></div>
-            <button class="btn-redeem" onclick="useSkin('dark')">10點兌換</button>
+        <h3 style="margin:0;">單場活動海報匯出 (A4 / 2頁)</h3>
+        <p style="font-size:13px; color:#666; margin-bottom:20px;">選擇一個版型來產出您的活動紀錄。</p>
+
+        <div class="card">
+            <div>
+                <span class="tag-free">免費版型</span>
+                <div style="font-weight:bold; margin-top:5px;">[ 簡約紀錄 ]</div>
+            </div>
+            <button class="btn" onclick="exportNow('簡約紀錄')">匯出</button>
         </div>
-        <div class="skin-item">
-            <div><b>手繪溫馨風格</b><br><small>單次切換</small></div>
-            <button class="btn-redeem" onclick="useSkin('light')">10點兌換</button>
+
+        <div class="card">
+            <div>
+                <span class="tag-paid">付費版型</span>
+                <div style="font-weight:bold; margin-top:5px;">[ 童趣冒險 ]</div>
+                <div id="quota-display" class="quota-info">當前可用次數：0</div>
+            </div>
+            <div id="action-area">
+                <button class="btn" onclick="redeem('premium_01')">10 點兌換一次</button>
+            </div>
+        </div>
+
+        <hr style="border:0; border-top:1px solid #eee; margin:30px 0;">
+        <div style="background:#fffcf5; padding:15px; border-radius:12px; border:1px solid #ffeeba;">
+            <b style="font-size:14px;">長時段成長紀錄 (進階服務)</b><br>
+            <span style="font-size:12px; color:#777;">將多場活動串連，NT$ 199 / 10 頁。</span>
         </div>
     </div>
 
     <script>
         // 初始化地圖
-        const map = L.map('map', { zoomControl: false }).setView([48.8566, 2.3522], 14);
-        let currentTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+        const map = L.map('map', { zoomControl: false }).setView([25.0339, 121.5644], 14);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-        let points = 25;
+        let userPoints = 25;
+        let premiumQuota = 0; // 付費版型的可用次數
 
-        function toggleStore() {
-            document.getElementById('store-ui').classList.toggle('open');
+        function toggleStudio() {
+            document.getElementById('studio').classList.toggle('open');
         }
 
-        function useSkin(style) {
-            if (points < 10) {
-                alert("點數不足！快去通報設施賺取點數吧。");
-                return;
+        // 兌換邏輯：10點換一次使用權
+        function redeem(skinId) {
+            if (userPoints >= 10) {
+                userPoints -= 10;
+                premiumQuota += 1; // 增加一次使用次數
+                updateDisplay();
+                alert("兌換成功！您已獲得 1 次付費版型使用權。");
+            } else {
+                alert("公益點數不足，快去通報設施資訊賺點數吧！");
             }
+        }
 
-            // 扣除點數
-            points -= 10;
-            document.getElementById('pts').innerText = points;
+        // 匯出邏輯
+        function exportNow(name) {
+            if (name === '童趣冒險') {
+                if (premiumQuota > 0) {
+                    premiumQuota -= 1; // 使用掉一次
+                    updateDisplay();
+                    processExport(name);
+                }
+            } else {
+                processExport(name);
+            }
+        }
 
-            // 切換版型 (一次性效果)
-            map.removeLayer(currentTile);
-            const url = style === 'dark' 
-                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+        function processExport(name) {
+            alert(`正在以【${name}】版型生成 2 頁 PDF...匯出完成後，該次權限即消耗完畢。`);
+        }
+
+        function updateDisplay() {
+            document.getElementById('pts-val').innerText = userPoints;
+            document.getElementById('quota-display').innerText = `當前可用次數：${premiumQuota}`;
             
-            currentTile = L.tileLayer(url).addTo(map);
-            
-            alert("兌換成功！已消耗 10 點使用一次版型。");
-            toggleStore();
+            const area = document.getElementById('action-area');
+            if (premiumQuota > 0) {
+                area.innerHTML = `<button class="btn" onclick="exportNow('童趣冒險')">立即匯出</button>`;
+            } else {
+                area.innerHTML = `<button class="btn" onclick="redeem('premium_01')">10 點兌換一次</button>`;
+            }
+        }
+        
+        function toggleStudio() {
+            const studio = document.getElementById('studio');
+            studio.classList.toggle('open');
+            // 抽屜收起後修正地圖尺寸
+            if(!studio.classList.contains('open')) setTimeout(() => map.invalidateSize(), 300);
         }
     </script>
 </body>
