@@ -3,65 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Glowy GO ! | 帶寶寶也能出門去玩</title>
+    <title>Glowy GO ! | 真實數據驅動</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --amber: #FFBF00; --teal: #00838f; --soft-gray: #f8f9fa; --text: #3c4043; }
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: -apple-system, "Noto Sans TC", sans-serif; }
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; background: var(--soft-gray); }
-
-        /* 🟢 頂部：SNCF 搜尋列 + 獨立頭貼 */
+        :root { --amber: #FFBF00; --teal: #00838f; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
+        
+        /* UI 層級 */
         .header-ui { position: absolute; top: calc(env(safe-area-inset-top) + 12px); left: 12px; right: 12px; z-index: 1000; }
         .search-row { display: flex; gap: 10px; align-items: center; }
-        .sncf-bar { 
-            flex: 1; background: white; height: 50px; border-radius: 25px; 
-            display: flex; align-items: center; padding: 0 18px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12); cursor: pointer;
-        }
-        .profile-btn { 
-            width: 50px; height: 50px; border-radius: 50%; background: white; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12); overflow: hidden; border: 2px solid white; cursor: pointer;
-        }
+        .sncf-bar { flex: 1; background: white; height: 50px; border-radius: 25px; display: flex; align-items: center; padding: 0 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .sncf-bar input { border: none; outline: none; width: 100%; font-size: 16px; }
+        .profile-btn { width: 50px; height: 50px; border-radius: 50%; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 2px solid white; overflow: hidden; }
 
-        /* 🟢 第二排：設施分類標籤 (多選、透明小黃點) */
+        /* 標籤列 */
         .facility-tags { display: flex; gap: 8px; overflow-x: auto; margin-top: 12px; padding: 2px; }
-        .facility-tags::-webkit-scrollbar { display: none; }
-        .tag { 
-            background: rgba(255, 255, 255, 0.9); padding: 7px 16px; border-radius: 20px; 
-            font-size: 14px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.08); 
-            border: 1px solid transparent; transition: 0.3s;
-        }
-        .tag.selected { border-color: var(--amber); background: #fffcf0; color: #b8860b; }
+        .tag { background: white; padding: 7px 16px; border-radius: 20px; font-size: 14px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.1); cursor: pointer; }
+        .tag.active { background: var(--amber); color: white; }
 
-        /* 🟢 右側工具：僅 GPS 定位 */
-        .gps-fab { 
-            position: absolute; right: 16px; bottom: 180px; z-index: 1000; 
-            width: 56px; height: 56px; border-radius: 28px; background: white; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15); border: none; font-size: 26px; cursor: pointer;
-        }
-
-        /* 🟢 浮動泡泡：活動資訊與採集寶物 */
+        /* 浮動泡泡：生命史感採集 */
         .bubble { 
             position: absolute; bottom: 260px; left: 50%; transform: translateX(-50%);
-            width: 88%; background: white; border-radius: 24px; padding: 20px;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.2); z-index: 3000;
-            display: none; animation: popUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 85%; background: white; border-radius: 24px; padding: 20px;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.2); z-index: 3000; display: none;
         }
-        @keyframes popUp { from { bottom: 200px; opacity: 0; } to { bottom: 260px; opacity: 1; } }
-        .bubble-actions { display: flex; gap: 12px; margin-top: 18px; }
-        .btn-go { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #ddd; background: #fff; font-weight: 600; }
-        .btn-collect { flex: 1; padding: 14px; border-radius: 12px; border: none; background: var(--amber); color: white; font-weight: bold; }
 
-        /* 🟢 底部抽屜分頁 */
-        .bottom-nav { 
-            position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000; 
-            background: white; border-top: 1px solid #eee; display: flex; 
-            height: 75px; padding-bottom: env(safe-area-inset-bottom); 
-        }
-        .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #5f6368; font-size: 11px; }
-        .nav-tab.active { color: var(--teal); font-weight: bold; }
-        .nav-icon { font-size: 22px; margin-bottom: 4px; }
+        .gps-fab { position: absolute; right: 16px; bottom: 180px; z-index: 1000; width: 56px; height: 56px; border-radius: 28px; background: white; border: none; font-size: 26px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000; background: white; border-top: 1px solid #eee; display: flex; height: 75px; padding-bottom: env(safe-area-inset-bottom); }
+        .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #666; }
     </style>
 </head>
 <body>
@@ -70,94 +42,103 @@
 
     <div class="header-ui">
         <div class="search-row">
-            <div class="sncf-bar" onclick="openSNCF()">
-                <span style="color:var(--teal); font-weight:bold; margin-right:10px;">G</span>
-                <span style="color:#999;">找活動、採集生命寶物...</span>
+            <div class="sncf-bar">
+                <span>🔍</span>
+                <input type="text" id="search-input" placeholder="找活動、採集生命寶物..." onkeypress="if(event.key==='Enter') searchLocation()">
             </div>
-            <div class="profile-btn" onclick="openAccount()">
-                <img src="https://api.dicebear.com/7.x/micah/svg?seed=Glowy" style="width:100%">
-            </div>
+            <div class="profile-btn"><img src="https://api.dicebear.com/7.x/micah/svg?seed=Glowy" style="width:100%"></div>
         </div>
-        <div class="facility-tags">
-            <div class="tag" onclick="toggleTag(this)">🍼 哺乳室</div>
-            <div class="tag" onclick="toggleTag(this)">🚻 公廁</div>
-            <div class="tag" onclick="toggleTag(this)">🛗 電梯</div>
-            <div class="tag" onclick="toggleTag(this)">🚰 飲水機</div>
-            <div class="tag" onclick="toggleTag(this)">♿ 坡道</div>
+        <div class="facility-tags" id="tag-container">
+            <div class="tag" onclick="fetchFacilities('nursing_home')">🍼 哺乳室</div>
+            <div class="tag" onclick="fetchFacilities('toilets')">🚻 公廁</div>
+            <div class="tag" onclick="fetchFacilities('drinking_water')">🚰 飲水機</div>
+            <div class="tag" onclick="fetchFacilities('elevator')">🛗 電梯</div>
         </div>
     </div>
 
     <div class="bubble" id="actBubble">
-        <div style="display:flex; justify-content:space-between;">
-            <div id="bTitle" style="font-size:18px; font-weight:bold;">活動名稱</div>
-            <div id="bWeather" style="color:#ff9800; font-size:12px; font-weight:bold;">🌡️ 24°C 晴</div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b id="bTitle" style="font-size:18px;">正在加載活動...</b>
+            <span id="bWeather" style="color:orange; font-size:12px;">🌡️ --°C</span>
         </div>
-        <div id="bInfo" style="font-size:13px; color:#666; margin-top:6px;">適合 2-4 歲 | 與寶寶一起創造生命史感</div>
-        <div class="bubble-actions">
-            <button class="btn-go" onclick="launchNav()">🚀 前往導航</button>
-            <button class="btn-collect" onclick="collectLifeHistory()">💎 採集寶物</button>
+        <p id="bDesc" style="font-size:13px; color:#666;">生命史感採集：記錄與寶寶的冒險。</p>
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button onclick="launchNav()" style="flex:1; padding:12px; border-radius:12px; border:1px solid #ddd; background:none;">🚀 導航</button>
+            <button onclick="startCapture()" style="flex:1; padding:12px; border-radius:12px; border:none; background:var(--amber); color:white; font-weight:bold;">💎 採集寶物</button>
         </div>
     </div>
 
     <button class="gps-fab" onclick="map.locate({setView:true})">🎯</button>
 
     <nav class="bottom-nav">
-        <div class="nav-tab active"><span class="nav-icon">📍</span>探索</div>
-        <div class="nav-tab"><span class="nav-icon">🛒</span>周邊支援</div>
-        <div class="nav-tab" onclick="giveContribution()"><span class="nav-icon">✍️</span>貢獻</div>
-        <div class="nav-tab"><span class="nav-icon">⚙️</span>服務</div>
+        <div class="tab">📍<br>探索</div>
+        <div class="tab">🛒<br>周邊支援</div>
+        <div class="tab" onclick="reportIssue()">✍️<br>公益貢獻</div>
+        <div class="tab">⚙️<br>服務</div>
     </nav>
 
     <script>
-        // 初始化地圖
-        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([25.0339, 121.5644], 14);
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([25.0339, 121.5644], 15);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+        const dataLayer = L.layerGroup().addTo(map);
 
-        // 模擬數據：活動寶物 (琥珀色點)
-        const treasures = [
-            { id: 101, name: "信義親子手作營", lat: 25.035, lng: 121.567 },
-            { id: 102, name: "大安森林公園故事屋", lat: 25.031, lng: 121.535 }
-        ];
+        // 🟢 真實搜尋：Nominatim API
+        async function searchLocation() {
+            const query = document.getElementById('search-input').value;
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
+            const data = await res.json();
+            if (data[0]) {
+                map.setView([data[0].lat, data[0].lon], 16);
+                loadWeather(data[0].lat, data[0].lon);
+            }
+        }
 
-        treasures.forEach(t => {
-            L.circleMarker([t.lat, t.lng], {
-                radius: 12, fillColor: '#FFBF00', color: '#fff', weight: 3, fillOpacity: 0.9
-            }).addTo(map).on('click', (e) => {
-                L.DomEvent.stopPropagation(e);
-                showBubble(t);
-            });
+        // 🟢 真實設施介接：Overpass API (抓取全球真實設施)
+        async function fetchFacilities(type) {
+            dataLayer.clearLayers();
+            const bounds = map.getBounds();
+            const query = `[out:json];node["amenity"="${type}"](${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()});out;`;
+            
+            try {
+                const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                data.elements.forEach(el => {
+                    // 透明小黃點：代表設施
+                    L.circleMarker([el.lat, el.lon], {
+                        radius: 6, fillColor: '#FFBF00', color: '#fff', weight: 1, fillOpacity: 0.5
+                    }).addTo(dataLayer).on('click', () => {
+                        alert(`設施公益回報：${el.tags.name || '未命名設施'}\n若資訊有誤可點擊【公益貢獻】賺取琥珀點數。`);
+                    });
+                });
+            } catch (e) { console.error("API 限制頻率中"); }
+        }
+
+        // 🟢 真實天氣：Open-Meteo
+        async function loadWeather(lat, lng) {
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
+            const data = await res.json();
+            document.getElementById('bWeather').innerText = `🌡️ ${Math.round(data.current_weather.temperature)}°C`;
+        }
+
+        // 🟢 生命史感採集動作
+        function startCapture() {
+            alert("進入採集頁面：請上傳照片或影片完成生命史感紀錄！");
+            // 實際應跳轉至：camera.html
+        }
+
+        function reportIssue() {
+            alert("公益貢獻機制：回報設施損壞或搬遷，獲得琥珀點數！");
+        }
+
+        // 模擬一個琥珀色活動點 (寶物)
+        const treasure = L.circleMarker([25.035, 121.567], { radius: 12, fillColor: '#FFBF00', color: '#fff', weight: 3, fillOpacity: 1 }).addTo(map);
+        treasure.on('click', () => {
+            document.getElementById('bTitle').innerText = "寶寶藝術工作坊";
+            document.getElementById('actBubble').style.display = 'block';
+            loadWeather(25.035, 121.567);
         });
 
-        // 🟢 邏輯 1：SNCF 搜尋次頁
-        function openSNCF() {
-            alert("進入 SNCF 式搜尋次頁：\n1. 區域選擇\n2. 日期時間段\n3. 隨行者：特定寶寶 / 自訂隨行者年齡");
-        }
-
-        // 🟢 邏輯 2：個人帳號與雙軌體系
-        function openAccount() {
-            alert("帳號中心：\n📸 生命史感 (已採集活動史)\n🪙 公益點數 (累計琥珀點數)\n🍼 隨行寶寶名單管理");
-        }
-
-        // 🟢 邏輯 3：採集寶物 (生命史感)
-        function collectLifeHistory() {
-            alert("開啟相機中... 📸\n請拍攝現場照片或錄影以完成採集。\n這段回憶將存入您與寶寶的【生命史感】紀錄中。");
-            document.getElementById('actBubble').style.display = 'none';
-        }
-
-        // 🟢 邏輯 4：設施貢獻 (公益點數)
-        function giveContribution() {
-            alert("感謝公益回報！\n提報設施異動(如電梯維修)成功後，將發放【琥珀點數】獎勵。");
-        }
-
-        function showBubble(t) {
-            document.getElementById('bTitle').innerText = t.name;
-            document.getElementById('actBubble').style.display = 'block';
-            map.panTo([t.lat, t.lng]);
-        }
-
-        function toggleTag(el) { el.classList.toggle('selected'); }
-        map.on('click', () => { document.getElementById('actBubble').style.display = 'none'; });
-        function launchNav() { window.open("https://www.google.com/maps"); }
+        map.on('click', () => document.getElementById('actBubble').style.display = 'none');
     </script>
 </body>
 </html>
