@@ -10,36 +10,38 @@
     <style>
         * { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
         html, body { height: 100vh; width: 100vw; margin: 0; padding: 0; overflow: hidden; background: #ffffff; }
-        
-        /* 地圖容器強制填滿，防止空白 */
         #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%; height: 100%; z-index: 1; }
 
-        /* UI 層：確保在最前方但不擋住點擊 */
+        /* UI 層：緊湊佈局 */
         .ui-layer { z-index: 1001 !important; pointer-events: none; }
         .ui-layer * { pointer-events: auto; }
-        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 8px 32px rgba(0,0,0,0.08); }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
 
-        /* 搜尋此區域按鈕 */
-        #search-this-area {
-            position: fixed; top: 140px; left: 50%; transform: translateX(-50%);
-            padding: 10px 24px; border-radius: 99px; font-weight: 900; font-size: 14px;
-            display: none; z-index: 1002; animation: fadeInDown 0.4s ease-out;
-        }
-
-        /* 活動噴發特效 */
-        .event-marker {
-            width: 48px; height: 48px; background: #10B981; border: 4px solid white; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-size: 26px; 
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-            animation: burst 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        @keyframes burst { from { transform: scale(0) rotate(-45deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
-        @keyframes fadeInDown { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
-
-        .tag { padding: 10px 20px; font-size: 13px; border-radius: 99px; background: white; font-weight: 900; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: 0.2s; color: #475569; border: 1px solid #f1f5f9; }
-        .tag-active { background: #FFBF00; color: white; border-color: #FFBF00; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(255,191,0,0.3); }
+        /* 縮小後的搜尋欄 */
+        .search-bar { height: 48px; border-radius: 16px; padding: 0 16px; margin-top: 12px; }
         
-        .user-dot { width: 20px; height: 20px; background: #3B82F6; border: 4px solid white; border-radius: 50%; box-shadow: 0 0 20px rgba(59,130,246,0.6); }
+        /* 緊湊標籤 */
+        .tag-container { margin-top: 8px; gap: 6px; padding: 2px; }
+        .tag { padding: 6px 14px; font-size: 12px; border-radius: 12px; background: white; font-weight: 900; box-shadow: 0 2px 8px rgba(0,0,0,0.04); color: #475569; border: 1px solid #f1f5f9; white-space: nowrap; }
+        .tag-active { background: #FFBF00; color: white; border-color: #FFBF00; }
+
+        /* 搜尋此區域按鈕 - 縮小且靠上 */
+        #search-this-area {
+            position: fixed; top: 125px; left: 50%; transform: translateX(-50%);
+            padding: 6px 16px; border-radius: 99px; font-weight: 900; font-size: 12px;
+            display: none; z-index: 1002; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* 噴發動畫 */
+        .event-marker {
+            width: 40px; height: 40px; background: #10B981; border: 3px solid white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 22px; 
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            animation: burst 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes burst { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .user-dot { width: 16px; height: 16px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 15px rgba(59,130,246,0.5); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -47,47 +49,46 @@
 
     <div id="map"></div>
 
-    <div class="ui-layer fixed top-6 left-0 right-0 px-4 flex flex-col gap-4">
-        <div class="flex items-center gap-3">
-            <div class="flex-grow glass h-14 rounded-2xl flex items-center px-5 gap-3">
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="3"></path></svg>
-                <input id="search-input" type="text" readonly class="bg-transparent border-none focus:ring-0 text-base w-full font-black text-gray-700">
-                <div id="weather-box" class="flex items-center gap-1 border-l pl-3 text-sm font-black text-blue-500 whitespace-nowrap">12°C ☀️</div>
+    <div class="ui-layer fixed top-0 left-0 right-0 px-4">
+        <div class="flex items-center gap-2">
+            <div class="flex-grow glass search-bar flex items-center gap-3">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="3"></path></svg>
+                <input id="search-input" type="text" readonly class="bg-transparent border-none focus:ring-0 text-sm w-full font-black text-gray-700">
+                <div id="weather-box" class="flex items-center gap-1 border-l pl-3 text-xs font-black text-blue-500 whitespace-nowrap">12°C ☀️</div>
             </div>
-            <div class="w-14 h-14 rounded-2xl glass border-2 border-white overflow-hidden">
+            <div class="w-11 h-11 mt-3 rounded-xl glass border-2 border-white overflow-hidden">
                 <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Lucky" class="w-full h-full">
             </div>
         </div>
 
-        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1" id="tag-container"></div>
+        <div class="flex tag-container overflow-x-auto no-scrollbar" id="tag-container"></div>
     </div>
 
-    <button id="search-this-area" onclick="startDiscovery()" class="glass text-gray-800 font-black flex items-center gap-2">
-        🔄 <span id="search-btn-text">搜尋此區域</span>
+    <button id="search-this-area" onclick="startDiscovery()" class="bg-white text-gray-800 border border-gray-100 flex items-center gap-2">
+        <span id="search-btn-text">搜尋此區域</span>
     </button>
 
-    <button onclick="reCenter()" class="fixed bottom-44 right-6 w-14 h-14 bg-white rounded-full shadow-2xl flex items-center justify-center z-[1002] active:scale-90 transition-all border border-gray-100">
-        <svg class="w-7 h-7 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+    <button onclick="reCenter()" class="fixed bottom-40 right-4 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center z-[1002] active:scale-90 border border-gray-100">
+        <svg class="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
     </button>
 
-    <div id="drawer" class="fixed bottom-0 left-0 right-0 bg-white rounded-t-[42px] shadow-[0_-20px_60px_rgba(0,0,0,0.15)] z-[2000] px-8 pt-4 pb-12 transition-transform duration-500 transform translate-y-0">
-        <div class="w-14 h-1.5 bg-gray-100 rounded-full mx-auto mb-8" onclick="toggleDrawer()"></div>
+    <div id="drawer" class="fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-[2000] px-6 pt-3 pb-8 transition-transform duration-500 transform translate-y-0">
+        <div class="w-10 h-1 bg-gray-100 rounded-full mx-auto mb-6" onclick="toggleDrawer()"></div>
         <div id="drawer-content">
-            <div class="flex justify-between items-center px-2">
-                <div onclick="startDiscovery()" class="flex flex-col items-center gap-3">
-                    <div id="explore-icon" class="w-16 h-16 bg-amber-400 rounded-[24px] flex items-center justify-center text-3xl shadow-lg text-white transition-all active:scale-90">🧭</div>
-                    <span class="text-xs font-black text-gray-800" id="nav-explore">探索</span>
+            <div class="flex justify-between items-center px-4">
+                <div onclick="startDiscovery()" class="flex flex-col items-center gap-2">
+                    <div id="explore-icon" class="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center text-2xl shadow-md text-white transition-all active:scale-90">🧭</div>
+                    <span class="text-[10px] font-black text-gray-800" id="nav-explore">探索</span>
                 </div>
-                <div class="opacity-10 flex flex-col items-center gap-3"><div class="w-16 h-16 bg-gray-50 rounded-[24px] flex items-center justify-center text-3xl">🛒</div><span class="text-xs font-black text-gray-800">支援</span></div>
-                <div class="opacity-10 flex flex-col items-center gap-3"><div class="w-16 h-16 bg-gray-50 rounded-[24px] flex items-center justify-center text-3xl">🔧</div><span class="text-xs font-black text-gray-800">貢獻</span></div>
-                <div class="opacity-10 flex flex-col items-center gap-3"><div class="w-16 h-16 bg-gray-50 rounded-[24px] flex items-center justify-center text-3xl">🧧</div><span class="text-xs font-black text-gray-800">其他</span></div>
+                <div class="opacity-10 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-2xl">🛒</div><span class="text-[10px] font-black text-gray-800">支援</span></div>
+                <div class="opacity-10 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-2xl">🔧</div><span class="text-[10px] font-black text-gray-800">貢獻</span></div>
+                <div class="opacity-10 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-2xl">🧧</div><span class="text-[10px] font-black text-gray-800">其他</span></div>
             </div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- 1. 全自動語系偵測系統 ---
         const getLang = () => {
             const l = (navigator.language || navigator.userLanguage).toLowerCase();
             if (l.startsWith('fr')) return 'fr';
@@ -97,28 +98,24 @@
         const LKey = getLang();
 
         const i18n = {
-            fr: { search: "Où aller jouer ?", baby: "🍼 Bébé", toilet: "🚾 Toilettes", water: "💧 Eau", searchArea: "Chercher ici", explore: "Explorer", collect: "Récolter ✨", success: "Génial ! Récolté.", nav: "Y aller" },
+            fr: { search: "Où aller jouer ?", baby: "🍼 Bébé", toilet: "🚾 Toilettes", water: "💧 Eau", searchArea: "Chercher ici", explore: "Explorer", collect: "Récolter ✨", success: "Récolté !", nav: "Y aller" },
             zh: { search: "要去哪裡玩？", baby: "🍼 哺乳室", toilet: "🚾 公廁", water: "💧 飲水機", searchArea: "搜尋此區域", explore: "探索", collect: "我要採集 ✨", success: "採集成功！", nav: "如何前往" },
-            en: { search: "Where to play?", baby: "🍼 Baby Care", toilet: "🚾 Toilets", water: "💧 Water", searchArea: "Search here", explore: "Explore", collect: "Collect ✨", success: "Great! Collected.", nav: "Navigation" }
+            en: { search: "Where to play?", baby: "🍼 Baby Care", toilet: "🚾 Toilets", water: "💧 Water", searchArea: "Search here", explore: "Explore", collect: "Collect ✨", success: "Collected!", nav: "Navigation" }
         }[LKey];
 
         document.getElementById('search-input').value = i18n.search;
         document.getElementById('search-btn-text').innerText = i18n.searchArea;
         document.getElementById('nav-explore').innerText = i18n.explore;
         document.getElementById('tag-container').innerHTML = `
-            <button onclick="toggleTag('baby_care', this)" class="tag flex-shrink-0">${i18n.baby}</button>
-            <button onclick="toggleTag('toilets', this)" class="tag flex-shrink-0">${i18n.toilet}</button>
-            <button onclick="toggleTag('drinking_water', this)" class="tag flex-shrink-0">${i18n.water}</button>
+            <button onclick="toggleTag('baby_care', this)" class="tag">${i18n.baby}</button>
+            <button onclick="toggleTag('toilets', this)" class="tag">${i18n.toilet}</button>
+            <button onclick="toggleTag('drinking_water', this)" class="tag">${i18n.water}</button>
         `;
 
-        // --- 2. 地圖鋼鐵初始化 ---
         var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([48.8566, 2.3522], 15);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
         
-        // 防止地圖空白的自動修復機制
-        const fixMap = () => { map.invalidateSize(); };
-        setInterval(fixMap, 1000);
-        window.addEventListener('resize', fixMap);
+        setInterval(() => { map.invalidateSize(); }, 1000);
 
         var eventLayer = L.layerGroup().addTo(map);
         var userLayer = L.layerGroup().addTo(map);
@@ -129,52 +126,51 @@
         map.on('locationfound', (e) => {
             userLatLng = e.latlng;
             userLayer.clearLayers();
-            L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot', iconSize: [20, 20] }), zIndexOffset: 2000 }).addTo(userLayer);
+            L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot', iconSize: [16, 16] }), zIndexOffset: 2000 }).addTo(userLayer);
         });
 
         function reCenter() { if(userLatLng) map.flyTo(userLatLng, 16); }
 
-        // --- 3. 搜尋按鈕出現邏輯 ---
         map.on('moveend', () => {
-            if (map.getCenter().distanceTo(lastSearchCenter) > 300) {
+            if (map.getCenter().distanceTo(lastSearchCenter) > 200) {
                 document.getElementById('search-this-area').style.display = 'flex';
             }
         });
 
-        // --- 4. 真．活動噴發邏輯 ---
         function startDiscovery() {
             document.getElementById('search-this-area').style.display = 'none';
             const center = map.getCenter();
             lastSearchCenter = center;
 
             const icon = document.getElementById('explore-icon');
-            icon.style.transform = "rotate(720deg) scale(1.3)";
+            icon.style.transform = "rotate(360deg) scale(1.2)";
             
             setTimeout(() => {
                 icon.style.transform = "rotate(0deg) scale(1)";
                 const newEvents = [];
+                const names = LKey === 'fr' ? 
+                    ["🎨 Atelier d'Art", "🧸 Jeux de Paris", "📖 Conte Enfant", "🍦 Goûter Time"] : 
+                    ["🎨 小小藝術家", "🧸 巴黎遊戲場", "📖 親子故事屋", "🍦 點心時光"];
+                
                 for(let i=0; i<4; i++) {
-                    const latOff = (Math.random()-0.5)*0.012;
-                    const lonOff = (Math.random()-0.5)*0.012;
                     newEvents.push({
                         id: Date.now() + i,
-                        name: LKey === 'fr' ? `Activité Bébé ${i+1}` : (LKey === 'zh' ? `親子活動 ${i+1}` : `Family Fun ${i+1}`),
-                        lat: center.lat + latOff,
-                        lon: center.lng + lonOff,
-                        friendly: LKey === 'fr' ? "✅ Espace Bébé | ✅ Poussette OK" : "✅ 設有哺乳室 | ✅ 推車友善"
+                        name: names[i],
+                        lat: center.lat + (Math.random()-0.5)*0.01,
+                        lon: center.lng + (Math.random()-0.5)*0.01,
+                        friendly: LKey === 'fr' ? "✅ Poussette OK" : "✅ 推車友善"
                     });
                 }
                 renderEvents(newEvents);
-                
                 const group = new L.featureGroup(newEvents.map(e => L.marker([e.lat, e.lon])));
                 map.flyToBounds(group.getBounds().pad(0.3));
-            }, 700);
+            }, 500);
         }
 
         function renderEvents(data) {
             data.forEach(evt => {
                 L.marker([evt.lat, evt.lon], { 
-                    icon: L.divIcon({ className: '', html: `<div class="event-marker">✨</div>`, iconSize: [48, 48] }),
+                    icon: L.divIcon({ className: '', html: `<div class="event-marker">✨</div>`, iconSize: [40, 40] }),
                     zIndexOffset: 1000 
                 }).addTo(eventLayer).on('click', (e) => {
                     L.DomEvent.stopPropagation(e);
@@ -184,62 +180,50 @@
         }
 
         function openEventDetail(evt) {
-            const drawer = document.getElementById('drawer');
-            drawer.style.transform = "translateY(0)";
+            document.getElementById('drawer').style.transform = "translateY(0)";
             document.getElementById('drawer-content').innerHTML = `
-                <div class="animate-in slide-in-from-bottom-5 duration-300">
-                    <p class="text-emerald-500 font-black text-xs mb-1">📅 2026/02/03 | 🕒 14:00-18:00</p>
-                    <h3 class="text-2xl font-black text-slate-800 mb-2">${evt.name}</h3>
-                    <p class="text-slate-500 text-sm mb-6 font-medium">Lieu d'exploration pour les petits.</p>
-                    <div class="bg-emerald-50 text-emerald-700 p-5 rounded-[24px] text-xs font-black mb-8 border border-emerald-100">${evt.friendly}</div>
-                    <div class="flex gap-4">
-                        <button class="flex-1 py-4 bg-slate-50 rounded-2xl font-black text-slate-400 text-xs shadow-sm">🗺️ ${i18n.nav}</button>
-                        <button onclick="collectSuccess()" class="flex-1 py-4 bg-amber-400 text-white rounded-2xl font-black shadow-lg text-xs active:scale-95 transition-all">${i18n.collect}</button>
+                <div class="animate-in slide-in-from-bottom-3">
+                    <h3 class="text-xl font-black text-slate-800 mb-2">${evt.name}</h3>
+                    <div class="bg-emerald-50 text-emerald-700 p-3 rounded-xl text-[11px] font-black mb-6">${evt.friendly}</div>
+                    <div class="flex gap-3">
+                        <button class="flex-1 py-3 bg-slate-50 rounded-xl font-black text-slate-400 text-xs">${i18n.nav}</button>
+                        <button onclick="collectSuccess()" class="flex-1 py-3 bg-amber-400 text-white rounded-xl font-black shadow-md text-xs">${i18n.collect}</button>
                     </div>
                 </div>`;
         }
 
-        function collectSuccess() {
-            alert(i18n.success);
-            resetDrawerUI();
-        }
+        function collectSuccess() { alert(i18n.success); resetDrawerUI(); }
 
         function resetDrawerUI() {
             document.getElementById('drawer-content').innerHTML = `
-                <div class="flex justify-between items-center px-2">
-                    <div onclick="startDiscovery()" class="flex flex-col items-center gap-3">
-                        <div id="explore-icon" class="w-16 h-16 bg-amber-400 rounded-[24px] flex items-center justify-center text-3xl shadow-lg text-white">🧭</div>
-                        <span class="text-xs font-black text-gray-800">${i18n.explore}</span>
-                    </div>
-                    <div class="opacity-10 flex flex-col items-center gap-3"><div class="w-16 h-16 bg-gray-50 rounded-[24px] flex items-center justify-center text-3xl">🛒</div><span class="text-xs font-black text-gray-800">支援</span></div>
-                    <div class="opacity-10 flex flex-col items-center gap-3"><div class="w-16 h-16 bg-gray-50 rounded-[24px] flex items-center justify-center text-3xl">🔧</div><span class="text-xs font-black text-gray-800">貢獻</span></div>
-                    <div class="opacity-10 flex flex-col items-center gap-3"><div class="w-16 h-16 bg-gray-50 rounded-[24px] flex items-center justify-center text-3xl">🧧</div><span class="text-xs font-black text-gray-800">其他</span></div>
+                <div class="flex justify-between items-center px-4">
+                    <div onclick="startDiscovery()" class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center text-2xl shadow-md text-white">🧭</div><span class="text-[10px] font-black text-gray-800">${i18n.explore}</span></div>
+                    <div class="opacity-10 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-2xl">🛒</div><span class="text-[10px] font-black text-gray-800">支援</span></div>
+                    <div class="opacity-10 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-2xl">🔧</div><span class="text-[10px] font-black text-gray-800">貢獻</span></div>
+                    <div class="opacity-10 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-2xl">🧧</div><span class="text-[10px] font-black text-gray-800">其他</span></div>
                 </div>`;
         }
 
         function toggleDrawer() {
             const dr = document.getElementById('drawer');
-            dr.style.transform = dr.style.transform === "translateY(75%)" ? "translateY(0)" : "translateY(75%)";
+            dr.style.transform = dr.style.transform === "translateY(70%)" ? "translateY(0)" : "translateY(70%)";
         }
 
-        // --- 5. 設施過濾 ---
         var facilityLayers = {};
-        var activeTags = new Set();
         async function toggleTag(type, btn) {
-            if (activeTags.has(type)) {
-                activeTags.delete(type); btn.classList.remove('tag-active');
+            btn.classList.toggle('tag-active');
+            if (!btn.classList.contains('tag-active')) {
                 if (facilityLayers[type]) map.removeLayer(facilityLayers[type]);
-            } else {
-                activeTags.add(type); btn.classList.add('tag-active');
-                if (!facilityLayers[type]) facilityLayers[type] = L.layerGroup().addTo(map);
-                const b = map.getBounds();
-                const q = `[out:json];node["amenity"="${type}"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});out;`;
-                const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
-                const data = await res.json();
-                data.elements.forEach(el => {
-                    L.marker([el.lat, el.lon], { icon: L.divIcon({ className: 'w-3 h-3 bg-amber-400 rounded-full border-2 border-white', iconSize: [12, 12] }) }).addTo(facilityLayers[type]);
-                });
+                return;
             }
+            if (!facilityLayers[type]) facilityLayers[type] = L.layerGroup().addTo(map);
+            const b = map.getBounds();
+            const q = `[out:json];node["amenity"="${type}"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});out;`;
+            const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
+            const data = await res.json();
+            data.elements.forEach(el => {
+                L.marker([el.lat, el.lon], { icon: L.divIcon({ className: 'w-2 h-2 bg-amber-400 rounded-full border border-white', iconSize: [8, 8] }) }).addTo(facilityLayers[type]);
+            });
         }
     </script>
 </body>
