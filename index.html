@@ -10,16 +10,19 @@
     <style>
         body { font-family: 'Noto Sans TC', sans-serif; overflow: hidden; background: #f8f9fa; }
         #map { height: 100vh; width: 100vw; z-index: 1; }
+        
+        /* UI 層級定義：確保 UI 不會被地圖元件遮擋 */
         .top-ui { z-index: 1001 !important; }
+        .bottom-ui { z-index: 2000 !important; }
         
         /* 琥珀色設施點 */
         .facility-dot { width: 12px; height: 12px; background: #FFBF00; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 8px rgba(255,191,0,0.6); }
 
-        /* 綠色活動光暈 */
+        /* 綠色活動光暈 - 提升點擊優先度 */
         .event-marker {
-            width: 38px; height: 38px; background: #10B981; border: 3px solid white; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-size: 18px; 
-            box-shadow: 0 0 25px rgba(16, 185, 129, 0.6); position: relative;
+            width: 42px; height: 42px; background: #10B981; border: 3px solid white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 20px; 
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.6); cursor: pointer; pointer-events: auto !important;
         }
         .event-marker::after {
             content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%;
@@ -27,11 +30,13 @@
         }
         @keyframes pulse-green { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(2.5); opacity: 0; } }
 
-        /* 定位球藍點 */
-        .user-location-dot { width: 18px; height: 18px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 15px rgba(59,130,246,0.8); }
+        /* 定位球藍點 - 確保在最上層 */
+        .user-location-dot { width: 18px; height: 18px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 15px rgba(59,130,246,0.8); z-index: 999 !important; }
 
         .tag-active { background-color: #FFBF00 !important; color: white !important; border-color: #FFBF00 !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        .drawer-hidden { transform: translateY(100%); }
+        .drawer-visible { transform: translateY(0); }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -42,7 +47,7 @@
                 <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="3"></path></svg>
                 <input type="text" placeholder="要去哪裡玩？" class="bg-transparent border-none focus:ring-0 text-sm w-full font-medium">
             </div>
-            <div class="w-14 h-14 bg-white rounded-full shadow-xl border-2 border-white overflow-hidden">
+            <div class="w-14 h-14 bg-white rounded-full shadow-xl border-2 border-white overflow-hidden active:scale-95 transition-all">
                 <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Lucky" class="w-full h-full object-cover">
             </div>
         </div>
@@ -59,31 +64,38 @@
 
     <div id="map"></div>
 
+    <div id="drawer" class="bottom-ui fixed bottom-0 left-0 right-0 bg-white rounded-t-[40px] shadow-[0_-15px_50px_rgba(0,0,0,0.15)] px-8 pt-4 pb-12 transition-all duration-500 drawer-visible border-t border-gray-100">
+        <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8 cursor-pointer" onclick="resetDrawer()"></div>
+        <div id="drawer-content">
+            <div class="flex justify-between items-center text-center">
+                <div class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-amber-400 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-amber-100">🧭</div><span class="text-xs font-black">探索</span></div>
+                <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🛒</div><span class="text-xs font-black">支援</span></div>
+                <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🔧</div><span class="text-xs font-black">貢獻</span></div>
+                <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🧧</div><span class="text-xs font-black">其他</span></div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // 初始化地圖
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([48.8566, 2.3522], 15);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-        // --- 分層系統：確保彼此互不干擾 ---
-        const eventLayer = L.layerGroup().addTo(map); // 活動圖層
-        const userLayer = L.layerGroup().addTo(map);  // 定位圖層
-        const facilityLayers = {}; // 設施圖層（字典形式，如 {'toilets': layerGroup}）
+        // 圖層管理
+        const facilityLayers = {}; 
+        const eventLayer = L.layerGroup().addTo(map);
+        const userLayer = L.layerGroup().addTo(map);
         let activeTags = new Set();
 
-        // 監聽移動，顯示重新搜尋
-        map.on('moveend', () => {
-            if (activeTags.size > 0) document.getElementById('re-search-btn').style.display = 'flex';
-        });
-
-        // 1. 定位功能：找回藍色定位球
-        function onLocationFound(e) {
+        // 1. 定位功能加強
+        map.on('locationfound', (e) => {
             userLayer.clearLayers();
             const icon = L.divIcon({ className: 'user-location-dot', iconSize: [18, 18] });
-            L.marker(e.latlng, { icon }).addTo(userLayer);
-        }
-        map.on('locationfound', onLocationFound);
+            L.marker(e.latlng, { icon, zIndexOffset: 1000 }).addTo(userLayer);
+        });
 
-        // 2. 多選標籤切換
+        // 2. 設施多選切換
         function toggleTag(type, btn) {
             if (activeTags.has(type)) {
                 activeTags.delete(type);
@@ -94,14 +106,13 @@
                 btn.classList.add('tag-active');
                 fetchFacility(type);
             }
-            if (activeTags.size === 0) document.getElementById('re-search-btn').style.display = 'none';
+            document.getElementById('re-search-btn').style.display = (activeTags.size > 0) ? 'flex' : 'none';
         }
 
-        // 3. 抓取設施 (不影響活動與定位)
         async function fetchFacility(type) {
             if (!facilityLayers[type]) facilityLayers[type] = L.layerGroup().addTo(map);
-            else facilityLayers[type].addTo(map); // 確保已開啟
-
+            else facilityLayers[type].addTo(map);
+            
             facilityLayers[type].clearLayers();
             const bounds = map.getBounds();
             const query = `[out:json];node["amenity"="${type}"](${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()});out;`;
@@ -113,30 +124,66 @@
                     const icon = L.divIcon({ className: 'facility-dot', iconSize: [12, 12] });
                     L.marker([el.lat, el.lon], { icon }).addTo(facilityLayers[type]);
                 });
-            } catch (e) { console.error("Search failed", e); }
+            } catch (e) { console.error(e); }
         }
 
-        function refreshAllActiveTags() {
-            activeTags.forEach(type => fetchFacility(type));
-            document.getElementById('re-search-btn').style.display = 'none';
-        }
+        function refreshAllActiveTags() { activeTags.forEach(type => fetchFacility(type)); }
 
-        // 4. 渲染活動 (確保它們永遠在地圖上)
+        // 3. 活動點擊修復
+        const events = [
+            { id: 1, name: "🎨 羅浮宮：小小藝術家", lat: 48.8606, lon: 2.3376, time: "14:00", info: "專為親子設計的探索行程。" },
+            { id: 2, name: "🎈 杜樂麗：嘉年華", lat: 48.8640, lon: 2.3270, time: "16:00", info: "週末限定的大型遊樂場。" }
+        ];
+
         function renderEvents() {
             eventLayer.clearLayers();
-            const events = [
-                { id: 1, name: "🎨 羅浮宮活動", lat: 48.8606, lon: 2.3376 },
-                { id: 2, name: "🎈 杜樂麗活動", lat: 48.8640, lon: 2.3270 }
-            ];
             events.forEach(evt => {
-                const icon = L.divIcon({ className: '', html: `<div class="event-marker">✨</div>`, iconSize: [38, 38] });
-                L.marker([evt.lat, evt.lon], { icon }).addTo(eventLayer);
+                const icon = L.divIcon({ 
+                    className: '', 
+                    html: `<div class="event-marker">✨</div>`, 
+                    iconSize: [42, 42] 
+                });
+                // 增加 zIndexOffset 確保在設施點之上
+                L.marker([evt.lat, evt.lon], { icon, zIndexOffset: 500 })
+                    .addTo(eventLayer)
+                    .on('click', (e) => {
+                        L.DomEvent.stopPropagation(e);
+                        openEventDetail(evt);
+                    });
             });
         }
 
+        function openEventDetail(evt) {
+            const drawer = document.getElementById('drawer');
+            document.getElementById('drawer-content').innerHTML = `
+                <p class="text-emerald-500 font-black text-sm mb-1">🕒 ${evt.time}</p>
+                <h3 class="text-2xl font-black text-gray-900 mb-2">${evt.name}</h3>
+                <p class="text-gray-500 text-sm mb-6">${evt.info}</p>
+                <div class="flex gap-3">
+                    <button class="flex-1 py-4 border-2 border-gray-100 rounded-2xl font-black text-gray-500 text-sm">如何前往</button>
+                    <button class="flex-1 py-4 bg-emerald-500 text-white rounded-2xl font-black shadow-lg shadow-emerald-100 text-sm">我要採集</button>
+                </div>
+            `;
+            drawer.classList.replace('drawer-hidden', 'drawer-visible');
+        }
+
+        function resetDrawer() {
+            document.getElementById('drawer-content').innerHTML = `
+                <div class="flex justify-between items-center text-center">
+                    <div class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-amber-400 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-amber-100">🧭</div><span class="text-xs font-black">探索</span></div>
+                    <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🛒</div><span class="text-xs font-black">支援</span></div>
+                    <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🔧</div><span class="text-xs font-black">貢獻</span></div>
+                    <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🧧</div><span class="text-xs font-black">其他</span></div>
+                </div>
+            `;
+        }
+
+        // 點擊地圖空白處重置抽屜
+        map.on('click', resetDrawer);
+
         window.onload = () => { 
             renderEvents(); 
-            map.locate({ setView: true, watch: true }); // 開啟持續定位
+            map.locate({ setView: true, watch: true }); 
         };
     </script>
 </body>
