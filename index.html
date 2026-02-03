@@ -3,147 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Glowy GO ! | 育兒導航與動態紀錄</title>
+    <title>Glowy GO ! | 正式佈局</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --amber: #FFBF00; --bg: #fdfaf5; }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; background: var(--bg); }
-        
-        /* 地圖層 */
+        :root { --amber: #FFBF00; --bg: #fdfaf5; --text: #333; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, sans-serif; background: var(--bg); }
+
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
 
-        /* 用戶狀態列 */
-        .status-bar {
-            position: absolute; top: 15px; left: 15px; right: 15px; z-index: 1000;
-            background: white; padding: 12px 20px; border-radius: 30px;
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        /* 1. 頂部搜尋與頭貼區 */
+        .top-interface {
+            position: absolute; top: env(safe-area-inset-top, 15px); left: 15px; right: 15px;
+            z-index: 1000; display: flex; flex-direction: column; gap: 12px;
         }
-        .points-box { font-weight: bold; color: var(--amber); border-left: 1px solid #eee; padding-left: 15px; }
+        .search-row { display: flex; gap: 10px; align-items: center; }
+        .search-bar {
+            flex: 1; background: white; height: 48px; border-radius: 24px;
+            display: flex; align-items: center; padding: 0 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); font-size: 15px; color: #888;
+        }
+        .user-avatar {
+            width: 48px; height: 48px; border-radius: 24px; background: #eee;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 2px solid white;
+            cursor: pointer; overflow: hidden;
+        }
 
-        /* Memory Studio 介面 */
-        #studio {
-            position: fixed; bottom: -100%; left: 0; width: 100%; height: 80%;
-            background: white; z-index: 2000; border-radius: 25px 25px 0 0;
-            transition: bottom 0.3s ease; padding: 25px; box-sizing: border-box; overflow-y: auto;
+        /* 2. 第二排 Tags (橫向滑動) */
+        .tags-container {
+            display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px;
+            scrollbar-width: none; /* Firefox */
         }
-        #studio.open { bottom: 0; }
-        
-        .card {
-            border: 1px solid #eee; border-radius: 15px; padding: 15px; margin-bottom: 15px;
-            display: flex; justify-content: space-between; align-items: center;
+        .tags-container::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+        .tag {
+            background: white; padding: 8px 16px; border-radius: 18px;
+            white-space: nowrap; font-size: 13px; font-weight: 500;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #eee;
         }
-        .tag-free { color: #2ecc71; font-size: 12px; font-weight: bold; }
-        .tag-paid { color: var(--amber); font-size: 12px; font-weight: bold; }
-        
-        .btn {
-            background: var(--amber); color: white; border: none; padding: 10px 18px;
-            border-radius: 20px; font-weight: bold; cursor: pointer;
+
+        /* 3. 底部功能列 (Tab Bar) */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0; height: 70px;
+            background: white; z-index: 2000; display: flex;
+            justify-content: space-around; align-items: center;
+            border-top: 1px solid #eee; padding-bottom: env(safe-area-inset-bottom);
         }
-        .btn:disabled { background: #eee; color: #aaa; }
-        .quota-info { font-size: 11px; color: #999; margin-top: 4px; }
+        .nav-item { text-align: center; color: #888; font-size: 11px; cursor: pointer; flex: 1; }
+        .nav-item.active { color: var(--amber); }
+        .nav-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+
+        /* 4. 會員中心彈窗 (從頭貼進入) */
+        #user-panel {
+            position: fixed; top: 0; right: -100%; width: 85%; height: 100%;
+            background: white; z-index: 3000; transition: 0.3s;
+            padding: 40px 25px; box-sizing: border-box;
+        }
+        #user-panel.open { right: 0; }
+        .user-info-section { margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
     </style>
 </head>
 <body>
 
-    <div class="status-bar">
-        <div onclick="toggleStudio()" style="cursor:pointer">📸 精彩時刻 (Memory Studio)</div>
-        <div class="points-box">💎 <span id="pts-val">25</span> 點</div>
-    </div>
-
     <div id="map"></div>
 
-    <div id="studio">
-        <div style="width:40px; height:4px; background:#ddd; margin: 0 auto 20px; border-radius:2px;" onclick="toggleStudio()"></div>
-        
-        <h3 style="margin:0;">單場活動海報匯出 (A4 / 2頁)</h3>
-        <p style="font-size:13px; color:#666; margin-bottom:20px;">選擇一個版型來產出您的活動紀錄。</p>
-
-        <div class="card">
-            <div>
-                <span class="tag-free">免費版型</span>
-                <div style="font-weight:bold; margin-top:5px;">[ 簡約紀錄 ]</div>
-            </div>
-            <button class="btn" onclick="exportNow('簡約紀錄')">匯出</button>
-        </div>
-
-        <div class="card">
-            <div>
-                <span class="tag-paid">付費版型</span>
-                <div style="font-weight:bold; margin-top:5px;">[ 童趣冒險 ]</div>
-                <div id="quota-display" class="quota-info">當前可用次數：0</div>
-            </div>
-            <div id="action-area">
-                <button class="btn" onclick="redeem('premium_01')">10 點兌換一次</button>
+    <div class="top-interface">
+        <div class="search-row">
+            <div class="search-bar">🔍 搜尋活動、設施或關鍵字...</div>
+            <div class="user-avatar" onclick="toggleUserPanel()">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Glowy" alt="avatar" style="width:100%">
             </div>
         </div>
+        <div class="tags-container">
+            <div class="tag">🍼 哺乳室</div>
+            <div class="tag">🎡 抓寶活動</div>
+            <div class="tag">☕ 親子友善</div>
+            <div class="tag">🎒 托育設施</div>
+            <div class="tag">💧 飲水機</div>
+        </div>
+    </div>
 
-        <hr style="border:0; border-top:1px solid #eee; margin:30px 0;">
-        <div style="background:#fffcf5; padding:15px; border-radius:12px; border:1px solid #ffeeba;">
-            <b style="font-size:14px;">長時段成長紀錄 (進階服務)</b><br>
-            <span style="font-size:12px; color:#777;">將多場活動串連，NT$ 199 / 10 頁。</span>
+    <div id="user-panel">
+        <div onclick="toggleUserPanel()" style="font-size: 24px; margin-bottom: 20px;">✕</div>
+        <div class="user-info-section">
+            <h2 style="margin:0;">User_8824</h2>
+            <div style="color:var(--amber); font-weight:bold; margin-top:5px;">💎 25 累積點數</div>
+        </div>
+        <div class="menu-list">
+            <div style="padding:15px 0; border-bottom:1px solid #f5f5f5;">👶 寶寶資料 (0-10歲)</div>
+            <div style="padding:15px 0; border-bottom:1px solid #f5f5f5;">📜 歷史紀錄 (活動足跡)</div>
+            <div style="padding:15px 0; border-bottom:1px solid #f5f5f5;">❤️ 個人偏好設定</div>
+            <div style="padding:15px 0; border-bottom:1px solid #f5f5f5;">💳 採購紀錄 (Collect)</div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active">
+            <span class="nav-icon">🗺️</span>地圖
+        </div>
+        <div class="nav-item">
+            <span class="nav-icon">✍️</span>貢獻
+        </div>
+        <div class="nav-item">
+            <span class="nav-icon">📸</span>精彩時刻
+        </div>
+        <div class="nav-item">
+            <span class="nav-icon">🗂️</span>卡包
         </div>
     </div>
 
     <script>
-        // 初始化地圖
-        const map = L.map('map', { zoomControl: false }).setView([25.0339, 121.5644], 14);
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([25.0339, 121.5644], 14);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-        let userPoints = 25;
-        let premiumQuota = 0; // 付費版型的可用次數
-
-        function toggleStudio() {
-            document.getElementById('studio').classList.toggle('open');
-        }
-
-        // 兌換邏輯：10點換一次使用權
-        function redeem(skinId) {
-            if (userPoints >= 10) {
-                userPoints -= 10;
-                premiumQuota += 1; // 增加一次使用次數
-                updateDisplay();
-                alert("兌換成功！您已獲得 1 次付費版型使用權。");
-            } else {
-                alert("公益點數不足，快去通報設施資訊賺點數吧！");
-            }
-        }
-
-        // 匯出邏輯
-        function exportNow(name) {
-            if (name === '童趣冒險') {
-                if (premiumQuota > 0) {
-                    premiumQuota -= 1; // 使用掉一次
-                    updateDisplay();
-                    processExport(name);
-                }
-            } else {
-                processExport(name);
-            }
-        }
-
-        function processExport(name) {
-            alert(`正在以【${name}】版型生成 2 頁 PDF...匯出完成後，該次權限即消耗完畢。`);
-        }
-
-        function updateDisplay() {
-            document.getElementById('pts-val').innerText = userPoints;
-            document.getElementById('quota-display').innerText = `當前可用次數：${premiumQuota}`;
-            
-            const area = document.getElementById('action-area');
-            if (premiumQuota > 0) {
-                area.innerHTML = `<button class="btn" onclick="exportNow('童趣冒險')">立即匯出</button>`;
-            } else {
-                area.innerHTML = `<button class="btn" onclick="redeem('premium_01')">10 點兌換一次</button>`;
-            }
-        }
-        
-        function toggleStudio() {
-            const studio = document.getElementById('studio');
-            studio.classList.toggle('open');
-            // 抽屜收起後修正地圖尺寸
-            if(!studio.classList.contains('open')) setTimeout(() => map.invalidateSize(), 300);
+        function toggleUserPanel() {
+            document.getElementById('user-panel').classList.toggle('open');
         }
     </script>
 </body>
