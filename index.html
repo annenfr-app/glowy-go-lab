@@ -3,91 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Glowy GO ! 帳戶中心</title>
+    <title>Glowy GO ! 消耗性兌換版</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { background: #fdfaf5; font-family: sans-serif; margin: 0; padding: 0; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: sans-serif; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
         
-        /* 帳戶頂部：直接、透明的數據 */
-        .user-account-bar {
-            background: #FFF;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #eee;
-            position: sticky; top: 0; z-index: 1001;
+        /* 頂部帳戶條 */
+        .account-bar {
+            position: absolute; top: 10px; left: 10px; right: 10px; z-index: 1000;
+            background: rgba(255,255,255,0.9); padding: 10px 15px; border-radius: 20px;
+            display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .user-id { font-weight: bold; color: #333; font-size: 14px; }
-        .stats-row { display: flex; gap: 15px; }
-        .stat-box { text-align: center; }
-        .stat-num { display: block; font-size: 18px; font-weight: bold; color: #FFBF00; }
-        .stat-unit { font-size: 10px; color: #999; }
+        .points-display { font-weight: bold; color: #FFBF00; cursor: pointer; }
 
-        /* 版型商店清單 */
-        .skin-store { padding: 20px; }
-        .skin-item {
-            background: #FFF; border-radius: 12px; padding: 15px; margin-bottom: 15px;
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        /* 商店抽屜 */
+        #store-ui {
+            position: fixed; bottom: -70%; left: 0; width: 100%; height: 70%;
+            background: white; z-index: 2000; border-radius: 20px 20px 0 0;
+            transition: bottom 0.3s ease; box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
+            padding: 20px; box-sizing: border-box;
         }
-        .skin-info b { display: block; color: #D28E5D; }
-        .skin-info span { font-size: 12px; color: #666; }
+        #store-ui.open { bottom: 0; }
         
-        .redeem-btn {
-            background: #FFBF00; color: white; border: none; padding: 8px 16px;
-            border-radius: 20px; font-weight: bold; font-size: 12px; cursor: pointer;
+        .skin-item {
+            border-bottom: 1px solid #eee; padding: 15px 0;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .redeem-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-redeem { background: #FFBF00; color: white; border: none; padding: 8px 15px; border-radius: 15px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div class="user-account-bar">
-        <div class="user-id">User_8824</div>
-        <div class="stats-row">
-            <div class="stat-box">
-                <span class="stat-num">42</span>
-                <span class="stat-unit">有效貢獻</span>
-            </div>
-            <div class="stat-box">
-                <span id="points" class="stat-num">25</span>
-                <span class="stat-unit">累積點數</span>
-            </div>
-        </div>
+    <div class="account-bar">
+        <span>User_8824</span>
+        <div class="points-display" onclick="toggleStore()">💰 <span id="pts">25</span> 點 (商店)</div>
     </div>
 
-    <div class="skin-store">
-        <h4 style="color:#888; font-size:12px; margin-bottom:15px;">可用版型</h4>
+    <div id="map"></div>
+
+    <div id="store-ui">
+        <div style="display:flex; justify-content:space-between;">
+            <h3 style="margin:0;">版型商店</h3>
+            <button onclick="toggleStore()" style="border:none; background:none; font-size:20px;">✕</button>
+        </div>
+        <p style="font-size:12px; color:red;">* 消耗 10 點可切換版型一次，切換後點數即扣除。</p>
         
         <div class="skin-item">
-            <div class="skin-info">
-                <b>Cyberpunk 霓虹版</b>
-                <span>適合夜間出門使用</span>
-            </div>
-            <button class="redeem-btn" onclick="redeem(10)">10 點兌換</button>
+            <div><b>Cyberpunk 霓虹</b><br><small>單次切換</small></div>
+            <button class="btn-redeem" onclick="useSkin('dark')">10點兌換</button>
         </div>
-
         <div class="skin-item">
-            <div class="skin-info">
-                <b>手繪溫馨版</b>
-                <span>全地圖手繪圖示風格</span>
-            </div>
-            <button class="redeem-btn" onclick="redeem(10)">10 點兌換</button>
+            <div><b>手繪溫馨風格</b><br><small>單次切換</small></div>
+            <button class="btn-redeem" onclick="useSkin('light')">10點兌換</button>
         </div>
     </div>
 
     <script>
-        let currentPoints = 25;
+        // 初始化地圖
+        const map = L.map('map', { zoomControl: false }).setView([48.8566, 2.3522], 14);
+        let currentTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-        function redeem(cost) {
-            if (currentPoints >= cost) {
-                currentPoints -= cost;
-                document.getElementById('points').innerText = currentPoints;
-                alert(`兌換成功！已扣除 ${cost} 點，點數剩餘 ${currentPoints}。`);
-                // 此處點數兌換後即刪除，剩餘數字即時更新
-            } else {
-                alert("點數不足");
+        let points = 25;
+
+        function toggleStore() {
+            document.getElementById('store-ui').classList.toggle('open');
+        }
+
+        function useSkin(style) {
+            if (points < 10) {
+                alert("點數不足！快去通報設施賺取點數吧。");
+                return;
             }
+
+            // 扣除點數
+            points -= 10;
+            document.getElementById('pts').innerText = points;
+
+            // 切換版型 (一次性效果)
+            map.removeLayer(currentTile);
+            const url = style === 'dark' 
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+            
+            currentTile = L.tileLayer(url).addTo(map);
+            
+            alert("兌換成功！已消耗 10 點使用一次版型。");
+            toggleStore();
         }
     </script>
 </body>
