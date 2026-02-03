@@ -12,221 +12,29 @@
         html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; background: #f8fafc; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
 
-        /* 介面層級控制 */
+        /* UI 層級控制 */
         .ui-layer { z-index: 1001 !important; pointer-events: none; }
         .ui-layer * { pointer-events: auto; }
-        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .glass { background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.3); }
 
         /* 搜尋此區域按鈕 */
         #search-this-area {
-            position: fixed; top: 120px; left: 50%; transform: translateX(-50%);
-            padding: 8px 16px; border-radius: 99px; font-weight: 900; font-size: 13px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: none; z-index: 1002;
-            animation: fadeInDown 0.3s ease-out;
+            position: fixed; top: 130px; left: 50%; transform: translateX(-50%);
+            padding: 10px 20px; border-radius: 99px; font-weight: 900; font-size: 13px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1); display: none; z-index: 1002;
+            animation: fadeInDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        /* 活動噴發動畫 */
+        /* 活動噴發動畫 ✨ */
         .event-marker {
-            width: 42px; height: 42px; background: #10B981; border: 3px solid white; border-radius: 50%;
+            width: 44px; height: 44px; background: #10B981; border: 3px solid white; border-radius: 50%;
             display: flex; align-items: center; justify-content: center; font-size: 24px; 
             box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
-            animation: burst 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.5);
+            animation: burst 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         @keyframes burst { from { transform: scale(0) rotate(-45deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
         @keyframes fadeInDown { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
-        /* 標籤設計 */
-        .tag { padding: 6px 14px; font-size: 12px; border-radius: 99px; background: white; font-weight: 900; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s; }
-        .tag-active { background: #FFBF00; color: white; transform: translateY(-2px); }
-        
-        /* 定位點 */
-        .user-dot { width: 18px; height: 18px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 15px rgba(59,130,246,0.5); }
-    </style>
-</head>
-<body>
-
-    <div id="map"></div>
-
-    <div class="ui-layer fixed top-4 left-0 right-0 px-4 flex flex-col gap-3">
-        <div class="flex items-center gap-3">
-            <div class="flex-grow glass h-12 rounded-2xl shadow-lg flex items-center px-4 gap-3">
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="3"></path></svg>
-                <input id="search-input" type="text" class="bg-transparent border-none focus:ring-0 text-sm w-full font-black text-gray-700">
-                <div id="temp-display" class="flex items-center gap-1 border-l pl-3 text-sm font-black text-blue-500 whitespace-nowrap">12°C ☀️</div>
-            </div>
-            <div class="w-12 h-12 rounded-2xl shadow-lg border-2 border-white overflow-hidden bg-white">
-                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Lucky" class="w-full h-full">
-            </div>
-        </div>
-
-        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1" id="tag-container">
-            </div>
-    </div>
-
-    <button id="search-this-area" onclick="startDiscovery()" class="bg-white text-gray-800 border border-gray-100 flex items-center gap-2">
-        🔄 <span id="search-btn-text">搜尋此區域</span>
-    </button>
-
-    <button onclick="reCenter()" class="fixed bottom-36 right-6 w-12 h-12 bg-white rounded-full shadow-2xl flex items-center justify-center z-[1002] active:scale-90 transition-all border border-gray-50">
-        <svg class="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
-    </button>
-
-    <div id="drawer" class="fixed bottom-0 left-0 right-0 bg-white rounded-t-[36px] shadow-[0_-15px_50px_rgba(0,0,0,0.12)] z-[2000] px-8 pt-3 pb-10 transition-transform duration-300 transform translate-y-0">
-        <div class="w-12 h-1.5 bg-gray-100 rounded-full mx-auto mb-6" onclick="toggleDrawer()"></div>
-        <div id="drawer-content">
-            <div class="flex justify-between items-center px-2">
-                <div onclick="startDiscovery()" class="flex flex-col items-center gap-2">
-                    <div id="explore-icon" class="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center text-3xl shadow-lg text-white">🧭</div>
-                    <span class="text-xs font-black text-gray-800" id="nav-explore">探索</span>
-                </div>
-                <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-3xl">🛒</div><span class="text-xs font-black text-gray-800">支援</span></div>
-                <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-3xl">🔧</div><span class="text-xs font-black text-gray-800">貢獻</span></div>
-                <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-3xl">🧧</div><span class="text-xs font-black text-gray-800">其他</span></div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        // 1. 語言設定系統 (L10n)
-        const lang = navigator.language.startsWith('zh') ? 'zh' : (navigator.language.startsWith('fr') ? 'fr' : 'en');
-        const i18n = {
-            zh: { search: "探索身邊的親子活動...", baby: "🍼 哺乳室", toilet: "🚾 公廁", water: "💧 飲水機", searchArea: "搜尋此區域", explore: "探索", collect: "我要採集", success: "🎉 採集成功！", detail: "活動詳情" },
-            en: { search: "Explore family activities...", baby: "🍼 Baby Care", toilet: "🚾 Toilets", water: "💧 Water", searchArea: "Search this area", explore: "Explore", collect: "Collect", success: "🎉 Collected!", detail: "Details" },
-            fr: { search: "Explorer les activités...", baby: "🍼 Bébé", toilet: "🚾 Toilettes", water: "💧 Eau", searchArea: "Chercher ici", explore: "Explorer", collect: "Collecter", success: "🎉 Collecté!", detail: "Détails" }
-        }[lang];
-
-        // 套用語言
-        document.getElementById('search-input').placeholder = i18n.search;
-        document.getElementById('search-btn-text').innerText = i18n.searchArea;
-        document.getElementById('nav-explore').innerText = i18n.explore;
-        document.getElementById('tag-container').innerHTML = `
-            <button onclick="toggleTag('baby_care', this)" class="tag flex-shrink-0">${i18n.baby}</button>
-            <button onclick="toggleTag('toilets', this)" class="tag flex-shrink-0">${i18n.toilet}</button>
-            <button onclick="toggleTag('drinking_water', this)" class="tag flex-shrink-0">${i18n.water}</button>
-        `;
-
-        // 2. 地圖核心
-        var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([48.8566, 2.3522], 15);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
-        
-        var eventLayer = L.layerGroup().addTo(map);
-        var userLayer = L.layerGroup().addTo(map);
-        var userLatLng = null;
-        var lastSearchCenter = map.getCenter();
-
-        // 3. 定位與回巢
-        map.locate({ setView: true, watch: true, enableHighAccuracy: true });
-        map.on('locationfound', (e) => {
-            userLatLng = e.latlng;
-            userLayer.clearLayers();
-            L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot', iconSize: [18, 18] }), zIndexOffset: 2000 }).addTo(userLayer);
-        });
-
-        function reCenter() { if(userLatLng) map.flyTo(userLatLng, 16); }
-
-        // 4. 「搜尋此區域」邏輯
-        map.on('moveend', () => {
-            const currentCenter = map.getCenter();
-            if (currentCenter.distanceTo(lastSearchCenter) > 500) {
-                document.getElementById('search-this-area').style.display = 'flex';
-            }
-        });
-
-        // 5. 探索功能 (爆發感與快取)
-        function startDiscovery() {
-            document.getElementById('search-this-area').style.display = 'none';
-            lastSearchCenter = map.getCenter();
-            const icon = document.getElementById('explore-icon');
-            icon.style.transform = "rotate(360deg) scale(1.2)";
-            icon.style.transition = "0.8s cubic-bezier(0.34, 1.56, 0.64, 1)";
-            
-            setTimeout(() => {
-                icon.style.transform = "rotate(0deg) scale(1)";
-                // 生成隨機活動 (模擬爆發)
-                const center = map.getCenter();
-                const events = [
-                    { id: Date.now()+1, name: lang === 'zh' ? "🎨 羅浮宮：小小藝術家" : "🎨 Louvre: Little Artist", lat: center.lat + (Math.random()-0.5)*0.01, lon: center.lng + (Math.random()-0.5)*0.01, info: "Family tour for all ages.", friendly: "✅ Stroller Friendly" },
-                    { id: Date.now()+2, name: lang === 'zh' ? "🧸 龐畢度：感官室" : "🧸 Pompidou: Sensory", lat: center.lat + (Math.random()-0.5)*0.01, lon: center.lng + (Math.random()-0.5)*0.01, info: "0-3 years sensory play.", friendly: "✅ Nursing Room" }
-                ];
-                renderEvents(events);
-            }, 800);
-        }
-
-        function renderEvents(data) {
-            // 注意：這裡不 clearLayers，實現「快取」效果，讓活動留著
-            data.forEach(evt => {
-                L.marker([evt.lat, evt.lon], { 
-                    icon: L.divIcon({ className: '', html: `<div class="event-marker">✨</div>`, iconSize: [42, 42] }),
-                    zIndexOffset: 1000 
-                }).addTo(eventLayer).on('click', (e) => {
-                    L.DomEvent.stopPropagation(e);
-                    openEventDetail(evt);
-                });
-            });
-        }
-
-        function openEventDetail(evt) {
-            const drawer = document.getElementById('drawer');
-            const content = document.getElementById('drawer-content');
-            
-            content.innerHTML = `
-                <div class="animate-in slide-in-from-bottom-5 duration-300">
-                    <p class="text-emerald-500 font-black text-xs mb-1">📅 2026/02/03 | 🕒 14:00-18:00</p>
-                    <h3 class="text-2xl font-black text-slate-800 mb-2">${evt.name}</h3>
-                    <p class="text-slate-500 text-xs mb-4 leading-relaxed">${evt.info}</p>
-                    <div class="bg-emerald-50 text-emerald-700 p-3 rounded-2xl text-xs font-black mb-6">${evt.friendly}</div>
-                    <div class="flex gap-3">
-                        <button class="flex-1 py-4 bg-slate-50 rounded-2xl font-black text-slate-400 text-xs">🗺️ Navigation</button>
-                        <button onclick="collectSuccess()" class="flex-1 py-4 bg-amber-400 text-white rounded-2xl font-black shadow-lg text-xs active:scale-95 transition-all">✨ ${i18n.collect}</button>
-                    </div>
-                </div>`;
-            drawer.style.transform = "translateY(0)";
-        }
-
-        function collectSuccess() {
-            alert(i18n.success);
-            resetDrawer();
-        }
-
-        function resetDrawer() {
-            // 改為不重新整理網頁，只恢復導航 UI
-            document.getElementById('drawer-content').innerHTML = `
-                <div class="flex justify-between items-center px-2">
-                    <div onclick="startDiscovery()" class="flex flex-col items-center gap-2">
-                        <div id="explore-icon" class="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center text-3xl shadow-lg text-white">🧭</div>
-                        <span class="text-xs font-black text-gray-800">${i18n.explore}</span>
-                    </div>
-                    <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-3xl">🛒</div><span class="text-xs font-black text-gray-800">支援</span></div>
-                    <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-3xl">🔧</div><span class="text-xs font-black text-gray-800">貢獻</span></div>
-                    <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-3xl">🧧</div><span class="text-xs font-black text-gray-800">其他</span></div>
-                </div>`;
-        }
-
-        function toggleDrawer() {
-            const drawer = document.getElementById('drawer');
-            drawer.style.transform = drawer.style.transform === "translateY(70%)" ? "translateY(0)" : "translateY(70%)";
-        }
-
-        // 初始化標籤功能（沿用之前的 Overpass 邏輯但加入語言支持）
-        var facilityLayers = {};
-        var activeTags = new Set();
-        async function toggleTag(type, btn) {
-            if (activeTags.has(type)) {
-                activeTags.delete(type); btn.classList.remove('tag-active');
-                if (facilityLayers[type]) map.removeLayer(facilityLayers[type]);
-            } else {
-                activeTags.add(type); btn.classList.add('tag-active');
-                if (!facilityLayers[type]) facilityLayers[type] = L.layerGroup().addTo(map);
-                const b = map.getBounds();
-                const q = `[out:json];node["amenity"="${type}"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});out;`;
-                const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
-                const data = await res.json();
-                data.elements.forEach(el => {
-                    L.marker([el.lat, el.lon], { icon: L.divIcon({ className: 'w-3 h-3 bg-amber-400 rounded-full border-2 border-white', iconSize: [12, 12] }) }).addTo(facilityLayers[type]);
-                });
-            }
-        }
-    </script>
-</body>
-</html>
+        /* 標籤與導航 */
+        .tag { padding: 8px 18px; font-size: 13px; border-radius: 99px; background: white; font-weight: 900; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: 0.2s; color: #475569
+              
