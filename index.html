@@ -3,131 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Glowy GO ! 2026 正式版</title>
+    <title>Glowy GO ! Core</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --amber: #FFBF00; --blue: #4285F4; --bg: #fdfaf5; }
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background: #eee; }
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
+        :root { --g-teal: #00838f; --amber: #FFBF00; --google-gray: #70757a; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; font-family: -apple-system, "SF Pro Display", sans-serif; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; background: #f8f9fa; }
 
-        /* 頂部介面：搜尋 + 會員頭貼 */
-        .top-ui { position: absolute; top: 20px; left: 15px; right: 15px; z-index: 1000; display: flex; flex-direction: column; gap: 12px; }
-        .search-row { display: flex; gap: 10px; align-items: center; }
-        .search-bar { flex: 1; background: white; height: 52px; border-radius: 26px; display: flex; align-items: center; padding: 0 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); font-size: 16px; color: #333; }
-        .search-bar input { border: none; outline: none; width: 100%; font-size: 15px; }
-        .user-avatar { width: 52px; height: 52px; border-radius: 26px; background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border: 2px solid white; cursor: pointer; overflow: hidden; }
+        /* 🟢 頂部介面：精確對齊 Gmaps 邏輯 */
+        .top-interface { position: absolute; top: calc(env(safe-area-inset-top) + 12px); left: 12px; right: 12px; z-index: 1000; pointer-events: none; }
+        .search-bar-row { display: flex; align-items: center; gap: 8px; pointer-events: auto; }
+        
+        .search-container { 
+            flex: 1; background: white; height: 48px; border-radius: 24px; 
+            display: flex; align-items: center; padding: 0 16px; 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2); 
+        }
+        .search-container input { flex: 1; border: none; outline: none; font-size: 16px; margin-left: 8px; color: #202124; }
+        
+        .profile-btn { 
+            width: 45px; height: 45px; border-radius: 50%; background: #fff; 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2); border: 2px solid white; 
+            overflow: hidden; cursor: pointer; pointer-events: auto;
+        }
 
-        /* Tags 第二排 */
-        .tags-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; -webkit-overflow-scrolling: touch; }
-        .tags-row::-webkit-scrollbar { display: none; }
-        .tag { background: white; padding: 9px 18px; border-radius: 20px; white-space: nowrap; font-size: 13px; font-weight: 500; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #f0f0f0; }
+        /* 橫向標籤列 */
+        .tag-scroller { display: flex; gap: 8px; overflow-x: auto; margin-top: 12px; pointer-events: auto; -webkit-overflow-scrolling: touch; }
+        .tag-scroller::-webkit-scrollbar { display: none; }
+        .tag { 
+            background: white; padding: 7px 16px; border-radius: 18px; 
+            white-space: nowrap; font-size: 14px; font-weight: 500;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer; border: 1px solid transparent;
+        }
+        .tag.active { border-color: var(--g-teal); color: var(--g-teal); }
 
-        /* 底部導覽：地圖、貢獻、寫真集、卡包 */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 85px; background: rgba(255,255,255,0.98); z-index: 2000; display: flex; border-top: 1px solid #eee; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #999; font-size: 11px; cursor: pointer; }
-        .nav-item.active { color: var(--amber); }
-        .nav-icon { font-size: 24px; margin-bottom: 4px; }
+        /* 🟢 右側：僅保留定位鈕 */
+        .gps-fab { 
+            position: absolute; right: 16px; bottom: 180px; z-index: 1000; 
+            width: 54px; height: 54px; border-radius: 27px; background: white; 
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2); border: none; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
 
-        /* 會員中心面板 (從頭貼進入) */
-        #member-panel { position: fixed; top: 0; right: -100%; width: 85%; height: 100%; background: white; z-index: 3000; transition: 0.4s cubic-bezier(0, 0, 0.2, 1); padding: 50px 25px; box-shadow: -10px 0 30px rgba(0,0,0,0.1); }
-        #member-panel.open { right: 0; }
-        .member-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        /* 🟢 底部抽屜 (Bottom Sheet) */
+        .bottom-drawer { 
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000; 
+            background: white; border-radius: 16px 16px 0 0; 
+            box-shadow: 0 -2px 15px rgba(0,0,0,0.1); 
+        }
+        .drawer-handle { width: 36px; height: 4px; background: #e0e0e0; border-radius: 2px; margin: 10px auto; }
+        .drawer-content { padding: 0 20px 15px; }
+        .loc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .loc-header h2 { margin: 0; font-size: 22px; letter-spacing: -0.5px; }
+        .weather-status { text-align: right; font-size: 12px; color: var(--google-gray); line-height: 1.4; }
 
-        /* GPS 定位鈕 */
-        .gps-btn { position: absolute; bottom: 105px; right: 20px; z-index: 1000; background: white; width: 56px; height: 56px; border-radius: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.25); font-size: 26px; border: none; cursor: pointer; }
-        .gps-btn:active { transform: scale(0.9); background: #fafafa; }
+        /* 導覽分頁 */
+        .nav-bar { display: flex; border-top: 1px solid #f1f3f4; padding-bottom: env(safe-area-inset-bottom); height: 72px; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #5f6368; font-size: 10px; text-decoration: none; }
+        .nav-item.active { color: var(--g-teal); }
+        .nav-icon { font-size: 22px; margin-bottom: 3px; }
+
+        /* 真實點位樣式 (琥珀色活動點) */
+        .amber-marker { background: var(--amber); border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
 
     <div id="map"></div>
 
-    <div class="top-ui">
-        <div class="search-row">
-            <div class="search-bar">🔍 <input type="text" placeholder="搜尋 5 分鐘應急設施..."></div>
-            <div class="user-avatar" onclick="toggleMember()">
-                <img src="https://api.dicebear.com/7.x/micah/svg?seed=Glowy" style="width:100%">
+    <div class="top-interface">
+        <div class="search-bar-row">
+            <div class="search-container">
+                <span>🔍</span>
+                <input type="text" id="search-input" placeholder="在此搜尋地點或活動..." onkeypress="if(event.key==='Enter') searchLocation()">
+            </div>
+            <div class="profile-btn" onclick="toggleProfile()">
+                <img src="https://api.dicebear.com/7.x/micah/svg?seed=Glowy" style="width:100%" alt="User">
             </div>
         </div>
-        <div class="tags-row">
-            <div class="tag">🍼 哺乳室</div><div class="tag">🎡 抓寶點</div><div class="tag">☕ 親子友善</div><div class="tag">🎒 托育</div><div class="tag">💧 飲水機</div>
+        <div class="tag-scroller">
+            <div class="tag active" onclick="fetchRealData('events')">🎡 活動</div>
+            <div class="tag" onclick="fetchRealData('nursing')">🍼 哺乳室</div>
+            <div class="tag" onclick="fetchRealData('friendly')">☕ 親子友善</div>
         </div>
     </div>
 
-    <div id="member-panel">
-        <div class="member-header">
-            <h2 style="margin:0;">會員中心</h2>
-            <div onclick="toggleMember()" style="font-size:28px; cursor:pointer;">✕</div>
-        </div>
-        <div style="background: #fff9e6; padding: 15px; border-radius: 12px; margin-bottom: 25px;">
-            <p style="margin:0; color:#888; font-size:13px;">當前累積點數</p>
-            <h1 style="margin:5px 0; color:var(--amber);">💎 25 pts</h1>
-        </div>
-        <div style="line-height: 3.5; font-weight: 500; color: #444;">
-            <div style="border-bottom:1px solid #f5f5f5;">👶 寶寶資料 (0-10歲)</div>
-            <div style="border-bottom:1px solid #f5f5f5;">📜 歷史活動紀錄</div>
-            <div style="border-bottom:1px solid #f5f5f5;">💳 採購紀錄 (Collect)</div>
-            <div style="border-bottom:1px solid #f5f5f5;">❤️ 個人偏好設定</div>
-            <div style="border-bottom:1px solid #f5f5f5;">⚙️ 系統設定</div>
-        </div>
-    </div>
+    <button class="gps-fab" onclick="getMyLocation()">🎯</button>
 
-    <button class="gps-btn" onclick="triggerGPS()">🎯</button>
-
-    <div class="bottom-nav">
-        <div class="nav-item active"><span class="nav-icon">🗺️</span>地圖</div>
-        <div class="nav-item"><span class="nav-icon">✍️</span>貢獻</div>
-        <div class="nav-item" onclick="alert('進入寫真集模組：免費匯出 2 頁 A4')"><span class="nav-icon">📸</span>寫真集</div>
-        <div class="nav-item"><span class="nav-icon">🗂️</span>卡包</div>
+    <div class="bottom-drawer">
+        <div class="drawer-handle"></div>
+        <div class="drawer-content">
+            <div class="loc-header">
+                <h2 id="current-location-name">台北市</h2>
+                <div class="weather-status" id="weather-data">
+                    🌡️ 24°C<br><span style="color:#4CAF50;">● AQI 優良</span>
+                </div>
+            </div>
+            <div id="dynamic-content" style="min-height: 20px; font-size: 14px; color: #5f6368;">
+                探索附近的親子社交活動...
+            </div>
+        </div>
+        <nav class="nav-bar">
+            <a href="#" class="nav-item active"><span class="nav-icon">📍</span>探索</a>
+            <a href="#" class="nav-item"><span class="nav-icon">👤</span>個人中心</a>
+            <a href="#" class="nav-item"><span class="nav-icon">＋</span>貢獻</a>
+            <a href="#" class="nav-item"><span class="nav-icon">🏪</span>服務</a>
+        </nav>
     </div>
 
     <script>
-        // 初始化：根據妳所在位置全球化 (預設巴黎展現跨國性)
-        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([48.8566, 2.3522], 15);
+        // 初始化地圖 - 預設台北 (也可改巴黎)
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([25.0339, 121.5644], 15);
+        
+        // 介接真實底圖：CartoDB Light (最接近 Gmaps 乾淨視覺)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-        let userMarker, radiusCircle;
-        let facilitiesLayer = L.layerGroup().addTo(map);
+        const dataLayer = L.layerGroup().addTo(map);
 
-        // 🟢 真正的動態點位加載（模擬 Open Data 介接邏輯）
-        function loadFacilities(lat, lng) {
-            facilitiesLayer.clearLayers();
-            // 在周邊 1km 內產生 15 個琥珀點
-            for(let i=0; i<15; i++) {
-                const rLat = lat + (Math.random()-0.5)*0.015;
-                const rLng = lng + (Math.random()-0.5)*0.015;
-                L.circleMarker([rLat, rLng], { 
-                    radius: 8, fillColor: "#FFBF00", color: "white", weight: 2, fillOpacity: 0.9 
-                }).addTo(facilitiesLayer).bindPopup("琥珀友善設施點");
+        // 🟢 1. 真實搜尋介接 (Nominatim)
+        async function searchLocation() {
+            const query = document.getElementById('search-input').value;
+            if(!query) return;
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            if(data.length > 0) {
+                map.setView([data[0].lat, data[0].lon], 16);
+                updateUIInfo(data[0].lat, data[0].lon, data[0].display_name);
             }
         }
 
-        // 🔵 GPS 生命線
-        function triggerGPS() {
-            map.locate({setView: true, maxZoom: 16, enableHighAccuracy: true});
+        // 🟢 2. 真實定位功能
+        function getMyLocation() {
+            map.locate({setView: true, maxZoom: 16});
         }
 
-        map.on('locationfound', function(e) {
-            if (userMarker) map.removeLayer(userMarker);
-            userMarker = L.circleMarker(e.latlng, { radius: 9, fillColor: "#4285F4", color: "white", weight: 3, fillOpacity: 1 }).addTo(map);
-            
-            // 畫出 5 分鐘應急圈 (約 400m)
-            if (radiusCircle) map.removeLayer(radiusCircle);
-            radiusCircle = L.circle(e.latlng, { radius: 400, color: "#FFBF00", weight: 1, fillOpacity: 0.05 }).addTo(map);
-            
-            loadFacilities(e.latlng.lat, e.latlng.lng);
+        map.on('locationfound', (e) => {
+            L.circle(e.latlng, { radius: e.accuracy / 2 }).addTo(map);
+            L.circleMarker(e.latlng, { radius: 8, fillColor: '#4285F4', color: 'white', weight: 3, fillOpacity: 1 }).addTo(map);
         });
 
-        map.on('locationerror', () => {
-            loadFacilities(map.getCenter().lat, map.getCenter().lng);
+        // 🟢 3. 真實數據獲取邏輯 (活動/設施)
+        async function fetchRealData(type) {
+            dataLayer.clearLayers();
+            const center = map.getCenter();
+            
+            // 這裡介接政府 Open Data 或後端 API
+            // 以下為 API 串接結構範例 (以台北市為例)
+            document.getElementById('dynamic-content').innerText = `正在載入附近的${type === 'events' ? '活動' : '設施'}...`;
+
+            // 範例：如果 type 是哺乳室，真實串接台北市政府 API 格式
+            // let apiURL = `https://data.taipei/api/v1/dataset/...`; 
+            
+            // 模擬解析後的真實點位渲染
+            const markers = (type === 'events') ? [
+                { lat: 25.0315, lng: 121.5350, name: "大安森林公園：親子野餐日", time: "14:00 - 17:00" },
+                { lat: 25.0350, lng: 121.5650, name: "信義區：兒童藝術工作坊", time: "10:00 - 12:00" }
+            ] : [
+                { lat: 25.0339, lng: 121.5644, name: "101 購物中心哺乳室", info: "4F" }
+            ];
+
+            markers.forEach(m => {
+                const color = (type === 'events') ? '#FFBF00' : '#E91E63';
+                const circle = L.circleMarker([m.lat, m.lng], {
+                    radius: 10, fillColor: color, color: 'white', weight: 2, fillOpacity: 0.9
+                }).addTo(dataLayer);
+
+                circle.on('click', () => {
+                    document.getElementById('current-location-name').innerText = m.name;
+                    document.getElementById('dynamic-content').innerText = m.time || m.info;
+                    map.panTo([m.lat, m.lng]);
+                });
+            });
+        }
+
+        // 🟢 4. 環境資訊同步 (天氣與地名)
+        async function updateUIInfo(lat, lng, defaultName) {
+            // 介接 Open-Meteo 天氣
+            const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`);
+            const wData = await wRes.json();
+            document.getElementById('weather-data').innerHTML = `🌡️ ${Math.round(wData.current_weather.temperature)}°C<br><span style="color:#4CAF50;">● AQI 優良</span>`;
+            
+            if(!defaultName) {
+                const rRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                const rData = await rRes.json();
+                document.getElementById('current-location-name').innerText = rData.address.city || rData.address.suburb || "探索中";
+            } else {
+                document.getElementById('current-location-name').innerText = defaultName.split(',')[0];
+            }
+        }
+
+        map.on('moveend', () => {
+            const c = map.getCenter();
+            updateUIInfo(c.lat, c.lng);
         });
 
-        function toggleMember() { document.getElementById('member-panel').classList.toggle('open'); }
-
-        // 初始載入
-        loadFacilities(48.8566, 2.3522);
-        window.onload = () => setTimeout(triggerGPS, 1000);
+        // 初始化
+        updateUIInfo(25.0339, 121.5644);
+        fetchRealData('events');
     </script>
 </body>
 </html>
