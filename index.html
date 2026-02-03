@@ -7,101 +7,123 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; }
-        #map { height: 100vh; width: 100vw; }
-        .facility-dot { width: 12px; height: 12px; background: #FFBF00; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.3); }
-        .user-dot { width: 16px; height: 16px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(59,130,246,0.5); }
-        
-        /* 修正後的定位鍵位置：標籤列下方 */
-        .locate-btn {
-            position: fixed; right: 20px; top: 150px; z-index: 1000;
-            width: 50px; height: 50px; background: white; border-radius: 50%;
-            display: flex; items-center; justify-center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border: none; cursor: pointer;
-        }
+        body { margin: 0; padding: 0; overflow: hidden; touch-action: none; }
+        #map { height: 100vh; width: 100vw; background: #f0f0f0; }
+        .user-dot { width: 18px; height: 18px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(59,130,246,0.5); }
+        .facility-dot { width: 12px; height: 12px; background: #FFBF00; border: 2px solid white; border-radius: 50%; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body>
+<body class="bg-gray-50">
 
-    <div style="position:fixed; top:80px; left:0; right:0; z-index:1000; display:flex; gap:10px; padding:0 20px; overflow-x:auto;">
-        <button onclick="updateData('baby_care')" style="white-space:nowrap; padding:8px 16px; border-radius:20px; border:none; background:white; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.1);">🍼 哺乳室</button>
-        <button onclick="updateData('toilets')" style="white-space:nowrap; padding:8px 16px; border-radius:20px; border:none; background:white; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.1);">🚾 公廁</button>
+    <div class="fixed top-4 left-0 right-0 z-[1000] px-4 flex items-center gap-3">
+        <div class="flex-grow bg-white/95 backdrop-blur h-12 rounded-full shadow-lg flex items-center px-4 gap-3 border border-gray-100">
+            <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2"></path></svg>
+            <span class="text-gray-400 text-sm font-medium">搜尋活動或友善設施...</span>
+        </div>
+        <div class="w-12 h-12 bg-white rounded-full shadow-lg border-2 border-amber-200 flex items-center justify-center overflow-hidden">
+            <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Glowy" class="w-full h-full object-cover">
+        </div>
     </div>
 
-    <button class="locate-btn" onclick="locateUser()">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2"><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/><circle cx="12" cy="12" r="3"/></svg>
+    <div class="fixed top-20 left-0 right-0 z-[1000] flex gap-2 px-4 overflow-x-auto no-scrollbar">
+        <button onclick="updateData('baby_care')" class="flex-shrink-0 px-5 py-2 bg-white rounded-full shadow-md text-xs font-bold border active:bg-amber-50">🍼 哺乳室</button>
+        <button onclick="updateData('toilets')" class="flex-shrink-0 px-5 py-2 bg-white rounded-full shadow-md text-xs font-bold border active:bg-amber-50">🚾 公廁</button>
+    </div>
+
+    <button id="locate-btn" class="fixed right-6 top-36 z-[1000] w-12 h-12 bg-white rounded-full shadow-2xl flex items-center justify-center text-gray-700 active:text-amber-500 border border-gray-100" onclick="handlePermissionAndLocate()">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
     </button>
 
     <div id="map"></div>
 
+    <div class="fixed bottom-0 left-0 right-0 z-[2000] bg-white rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.1)] px-8 pt-4 pb-10">
+        <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
+        <div class="flex justify-between items-center">
+            <div class="flex flex-col items-center gap-1"><div class="p-3 bg-amber-400 text-white rounded-2xl">🧭</div><span class="text-xs font-bold">探索</span></div>
+            <div class="flex flex-col items-center gap-1 opacity-30 grayscale text-2xl">🛒<span class="text-[10px]">支援</span></div>
+            <div class="flex flex-col items-center gap-1 opacity-30 grayscale text-2xl">🔧<span class="text-[10px]">貢獻</span></div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 初始化地圖（不設預設中心點，等待定位）
-        const map = L.map('map', { zoomControl: false, attributionControl: false });
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([25.033, 121.565], 13);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
         let facilityLayer = L.layerGroup().addTo(map);
         let userMarker = null;
 
-        function locateUser() {
-            // 啟用高精確度定位
+        // 【請求授權模式】符合歐盟規範的處理流程
+        async function handlePermissionAndLocate() {
+            // 1. 檢查瀏覽器權限狀態
+            if (!navigator.geolocation) {
+                alert("抱歉，您的瀏覽器不支援定位功能。");
+                return;
+            }
+
+            try {
+                // 部分瀏覽器支援查詢權限狀態
+                if (navigator.permissions && navigator.permissions.query) {
+                    const result = await navigator.permissions.query({ name: 'geolocation' });
+                    if (result.state === 'denied') {
+                        alert("定位權限已被拒絕。請至瀏覽器設定中手動開啟 Glowy GO ! 的位置存取權限。");
+                        return;
+                    }
+                }
+                
+                // 2. 執行定位
+                startLocating();
+            } catch (error) {
+                // 如果查詢權限出錯，直接嘗試定位
+                startLocating();
+            }
+        }
+
+        function startLocating() {
             map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true });
         }
 
-        // 當定位成功時的處理
         map.on('locationfound', function(e) {
             console.log("定位成功:", e.latlng);
-            
-            // 1. 更新或建立使用者位置標記
             if (userMarker) map.removeLayer(userMarker);
-            userMarker = L.marker(e.latlng, {
-                icon: L.divIcon({ className: 'user-dot', iconSize: [16, 16] })
-            }).addTo(map);
-
-            // 2. 強制地圖移動到該座標
-            map.panTo(e.latlng);
-
-            // 3. 立即載入 10km 內的全球數據
-            updateData('baby_care');
+            userMarker = L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot', iconSize: [18, 18] }) }).addTo(map);
+            map.flyTo(e.latlng, 16);
+            updateData('baby_care'); // 自動載入資料
         });
 
         map.on('locationerror', function(e) {
-            alert("定位失敗：請檢查手機是否開啟 GPS 並允許瀏覽器存取位置。");
+            alert("定位失敗：" + e.message + "\n請確保已開啟手機 GPS 並在彈出視窗點擊「允許」。");
         });
 
         async function updateData(type) {
             const bounds = map.getBounds();
             const sw = bounds.getSouthWest();
             const ne = bounds.getNorthEast();
-            
-            // 全球 Overpass API 查詢語法
-            let tag = 'nwr["amenity"~"baby_hatch|changing_room"];'; 
-            if(type === 'toilets') tag = 'nwr["amenity"="toilets"];';
-            
-            const query = `[out:json][timeout:25];(${tag});out center(${sw.lat},${sw.lng},${ne.lat},${ne.lng});`;
-            const url = `https://overpass-api.de/interpreter?data=${encodeURIComponent(query)}`;
+            const bbox = `${sw.lat},${sw.lng},${ne.lat},${ne.lng}`;
+
+            let queryTag = 'nwr["amenity"~"baby_hatch|changing_room"];';
+            if(type === 'toilets') queryTag = 'nwr["amenity"="toilets"];';
+
+            const query = `[out:json][timeout:25];(${queryTag});out center(${bbox});`;
+            const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
 
             try {
                 const res = await fetch(url);
                 const data = await res.json();
                 facilityLayer.clearLayers();
-                
                 data.elements.forEach(el => {
                     const lat = el.lat || (el.center && el.center.lat);
                     const lon = el.lon || (el.center && el.center.lon);
                     if (lat && lon) {
-                        L.marker([lat, lon], {
-                            icon: L.divIcon({ className: 'facility-dot', iconSize: [12, 12] })
-                        }).addTo(facilityLayer);
+                        L.marker([lat, lon], { icon: L.divIcon({ className: 'facility-dot', iconSize: [12, 12] }) }).addTo(facilityLayer);
                     }
                 });
-            } catch (err) {
-                console.error("載入失敗", err);
-            }
+            } catch (err) { console.error("資料加載失敗"); }
         }
 
-        // 頁面開啟自動啟動
-        window.onload = locateUser;
+        // 頁面加載後直接嘗試啟動授權檢查
+        window.onload = handlePermissionAndLocate;
     </script>
 </body>
 </html>
