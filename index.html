@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Glowy GO ! 2026</title>
+    <title>Glowy GO !</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --amber: #FFBF00; --bg: #fdfaf5; }
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background: #eee; }
+        :root { --amber: #FFBF00; --blue: #4285F4; --bg: #fdfaf5; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; }
 
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; background: #ddd; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; background: #e5e3df; }
 
-        /* 頂部：搜尋條 + 右上角頭貼 */
+        /* 頂部搜尋條與頭貼 */
         .top-ui {
             position: absolute; top: 20px; left: 15px; right: 15px;
             z-index: 1000; display: flex; flex-direction: column; gap: 10px;
@@ -21,35 +21,42 @@
         .search-bar {
             flex: 1; background: white; height: 50px; border-radius: 25px;
             display: flex; align-items: center; padding: 0 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15); font-size: 16px; color: #999;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 16px; color: #999;
         }
         .user-avatar {
             width: 50px; height: 50px; border-radius: 25px; background: white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15); overflow: hidden; border: 2px solid white; cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); overflow: hidden; border: 2px solid white; cursor: pointer;
         }
 
-        /* 第二排：Tags */
-        .tags-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; }
-        .tag { background: white; padding: 8px 18px; border-radius: 20px; white-space: nowrap; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        /* Tags 橫向捲動 */
+        .tags-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; -webkit-overflow-scrolling: touch; }
+        .tags-row::-webkit-scrollbar { display: none; }
+        .tag {
+            background: white; padding: 8px 18px; border-radius: 20px;
+            white-space: nowrap; font-size: 13px; font-weight: 500;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #f0f0f0;
+        }
 
         /* 底部導覽列 */
         .bottom-nav {
             position: fixed; bottom: 0; left: 0; right: 0; height: 80px;
             background: white; z-index: 2000; display: flex;
-            justify-content: space-around; align-items: center; border-top: 1px solid #eee;
+            justify-content: space-around; align-items: center;
+            border-top: 1px solid #eee; padding-bottom: env(safe-area-inset-bottom);
         }
-        .nav-item { text-align: center; color: #999; font-size: 12px; flex: 1; }
+        .nav-item { text-align: center; color: #999; font-size: 11px; flex: 1; }
         .nav-item.active { color: var(--amber); }
+        .nav-icon { font-size: 22px; margin-bottom: 3px; }
 
-        /* GPS 定位鈕 */
+        /* GPS 按鈕 - 增加視覺回饋 */
         .gps-btn {
             position: absolute; bottom: 100px; right: 20px; z-index: 1000;
             background: white; width: 52px; height: 52px; border-radius: 26px;
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.25); font-size: 26px; cursor: pointer;
-            border: none; outline: none; -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-size: 24px;
+            cursor: pointer; border: none; transition: transform 0.1s, background 0.1s;
         }
-        .gps-btn:active { background: #f0f0f0; }
+        .gps-btn:active { transform: scale(0.9); background: #f8f8f8; }
     </style>
 </head>
 <body>
@@ -58,57 +65,78 @@
 
     <div class="top-ui">
         <div class="search-row">
-            <div class="search-bar">🔍 搜尋活動名稱、類別...</div>
-            <div class="user-avatar" onclick="alert('開啟會員中心：含寶寶資料、積點、偏好設定')">
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Glowy" style="width:100%">
+            <div class="search-bar">🔍 搜尋活動、設施...</div>
+            <div class="user-avatar" onclick="alert('進入會員中心：資料、積點、個人設定')">
+                <img src="https://api.dicebear.com/7.x/micah/svg?seed=Glowy" style="width:100%">
             </div>
         </div>
         <div class="tags-row">
-            <div class="tag">🍼 哺乳室</div><div class="tag">🎡 抓寶活動</div><div class="tag">☕ 親子友善</div>
+            <div class="tag">🍼 哺乳室</div>
+            <div class="tag">🎡 抓寶活動</div>
+            <div class="tag">☕ 親子友善</div>
+            <div class="tag">🎒 托育設施</div>
         </div>
     </div>
 
-    <button class="gps-btn" id="locate-me">🎯</button>
+    <button class="gps-btn" onclick="triggerGPS()">🎯</button>
 
     <div class="bottom-nav">
-        <div class="nav-item active"><div>🗺️</div>地圖</div>
-        <div class="nav-item"><div>✍️</div>貢獻</div>
-        <div class="nav-item"><div>📸</div>寫真集</div>
-        <div class="nav-item"><div>🗂️</div>卡包</div>
+        <div class="nav-item active"><div class="nav-icon">🗺️</div>地圖</div>
+        <div class="nav-item"><div class="nav-icon">✍️</div>貢獻</div>
+        <div class="nav-item"><div class="nav-icon">📸</div>寫真集</div>
+        <div class="nav-item"><div class="nav-icon">🗂️</div>卡包</div>
     </div>
 
     <script>
-        // 初始位置：停在起始畫面 (台北)
-        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([25.0339, 121.5644], 15);
+        // 初始化地圖
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([25.0339, 121.5644], 16);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        let userMarker;
+        // 1. 載入琥珀友善設施（小黃點）
+        const facilities = [
+            { name: "忠孝新生友善哺乳室", lat: 25.0422, lng: 121.5328 },
+            { name: "信義區親子急救箱點位", lat: 25.0345, lng: 121.5655 },
+            { name: "國父紀念館抓寶活動點", lat: 25.0394, lng: 121.5592 }
+        ];
 
-        // 定義定位動作
+        facilities.forEach(loc => {
+            L.circleMarker([loc.lat, loc.lng], {
+                radius: 8,
+                fillColor: "#FFBF00",
+                color: "white",
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.9
+            }).addTo(map).bindPopup(`<b>${loc.name}</b>`);
+        });
+
+        // 2. 定位邏輯
+        let userMarker, accuracyCircle;
+
         function triggerGPS() {
-            console.log("嘗試獲取定位...");
+            console.log("正在觸發定位...");
             map.locate({setView: true, maxZoom: 16, enableHighAccuracy: true});
         }
 
-        // 定位成功邏輯
         map.on('locationfound', function(e) {
             if (userMarker) map.removeLayer(userMarker);
+            if (accuracyCircle) map.removeLayer(accuracyCircle);
+
+            // 繪製用戶當前位置（藍色點）
             userMarker = L.circleMarker(e.latlng, {
                 radius: 9, fillColor: "#4285F4", color: "white", weight: 3, opacity: 1, fillOpacity: 1
             }).addTo(map);
+
+            accuracyCircle = L.circle(e.latlng, e.accuracy / 2, {
+                color: "#4285F4", weight: 1, fillOpacity: 0.1
+            }).addTo(map);
         });
 
-        // 定位失敗靜默處理
         map.on('locationerror', function(e) {
-            console.warn("定位失敗，停留在目前畫面。");
+            console.log("定位失敗，靜默處理。");
         });
 
-        // 綁定按鈕點擊：確保用戶「點了就有動作」
-        document.getElementById('locate-me').addEventListener('click', function() {
-            triggerGPS();
-        });
-
-        // 初始加載時嘗試定位一次 (靜默)
+        // 初始啟動自動定位一次（依據全書規範）
         window.onload = triggerGPS;
     </script>
 </body>
