@@ -1,112 +1,41 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Glowy GO ! 2026</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-        :root { --amber: #FFBF00; --bg: #fdfaf5; }
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: -apple-system, sans-serif; background: #eee; }
-
-        /* 地圖底層：確保寬高絕對存在 */
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; background: #ddd; }
-
-        /* 頂部搜尋條區 */
-        .top-interface {
-            position: absolute; top: 20px; left: 15px; right: 15px;
-            z-index: 1000; display: flex; flex-direction: column; gap: 10px;
-        }
-        .search-row { display: flex; gap: 10px; align-items: center; }
-        .search-bar {
-            flex: 1; background: white; height: 50px; border-radius: 25px;
-            display: flex; align-items: center; padding: 0 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15); font-size: 16px; color: #999;
-        }
-        .user-avatar {
-            width: 50px; height: 50px; border-radius: 25px; background: white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15); overflow: hidden; border: 2px solid white;
+        // 1. 核心定位函式
+        function getLocation(isManual = false) {
+            console.log(isManual ? "用戶主動請求定位..." : "系統初始嘗試定位...");
+            
+            map.locate({
+                setView: true, 
+                maxZoom: 16,
+                enableHighAccuracy: true
+            });
         }
 
-        /* 第二排 Tags */
-        .tags-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px; -webkit-overflow-scrolling: touch; }
-        .tags-row::-webkit-scrollbar { display: none; }
-        .tag {
-            background: white; padding: 8px 18px; border-radius: 20px;
-            white-space: nowrap; font-size: 14px; font-weight: 500;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        /* 底部導覽列 */
-        .bottom-nav {
-            position: fixed; bottom: 0; left: 0; right: 0; height: 80px;
-            background: white; z-index: 2000; display: flex;
-            justify-content: space-around; align-items: center;
-            border-top: 1px solid #eee; padding-bottom: 10px;
-        }
-        .nav-item { text-align: center; color: #999; font-size: 12px; flex: 1; }
-        .nav-item.active { color: var(--amber); }
-
-        /* GPS 鈕 */
-        .gps-btn {
-            position: absolute; bottom: 100px; right: 20px; z-index: 1000;
-            background: white; width: 50px; height: 50px; border-radius: 25px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-size: 24px;
-        }
-    </style>
-</head>
-<body>
-
-    <div id="map"></div>
-
-    <div class="top-interface">
-        <div class="search-row">
-            <div class="search-bar">🔍 搜尋活動或設施...</div>
-            <div class="user-avatar">
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Glowy" style="width:100%">
-            </div>
-        </div>
-        <div class="tags-row">
-            <div class="tag">🍼 哺乳室</div>
-            <div class="tag">🎡 抓寶活動</div>
-            <div class="tag">☕ 親子友善</div>
-            <div class="tag">🎒 托育設施</div>
-        </div>
-    </div>
-
-    <div class="gps-btn" onclick="getLocation()">🎯</div>
-
-    <div class="bottom-nav">
-        <div class="nav-item active"><div>🗺️</div>地圖</div>
-        <div class="nav-item"><div>✍️</div>貢獻</div>
-        <div class="nav-item"><div>📸</div>寫真集</div>
-        <div class="nav-item"><div>🗂️</div>卡包</div>
-    </div>
-
-    <script>
-        // 初始化地圖：給予固定中心點，防止定位失敗時一片黑
-        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([25.0339, 121.5644], 15);
-        
-        // 使用更可靠的圖磚源
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-        let userMarker;
-
-        function getLocation() {
-            map.locate({setView: true, maxZoom: 16});
-        }
-
+        // 2. 定位成功：畫出定位點
         map.on('locationfound', function(e) {
             if (userMarker) map.removeLayer(userMarker);
             userMarker = L.circleMarker(e.latlng, {
-                radius: 10, fillColor: "#4285F4", color: "white", weight: 3, opacity: 1, fillOpacity: 1
+                radius: 8, 
+                fillColor: "#4285F4", 
+                color: "white", 
+                weight: 3, 
+                opacity: 1, 
+                fillOpacity: 1
             }).addTo(map);
         });
 
-        // 啟動後延遲 1 秒再定位，確保地圖已經完全加載
-        setTimeout(getLocation, 1000);
-    </script>
-</body>
-</html>
+        // 3. 定位失敗：靜默處理，不驚嚇用戶
+        map.on('locationerror', function(e) {
+            console.log("定位未成功，原因：" + e.message);
+            
+            // 只有在用戶「主動點擊」且「權限被拒絕」的情況下，才給予溫馨提示
+            // 否則保持靜默，讓用戶停留在起始畫面
+            if (e.message.includes("denied")) {
+                // 這裡可以用一個不干擾的小 Toast 或讓定位鈕閃爍一下，而非彈窗
+                console.log("提示：請在瀏覽器設定中允許位置權限以開啟導航。");
+            }
+        });
+
+        // 啟動時靜默嘗試一次
+        window.onload = () => {
+            getLocation(false); 
+        };
+        
