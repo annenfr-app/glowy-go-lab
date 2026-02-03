@@ -80,104 +80,65 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. 初始化地圖 (確保寬高計算正確)
-        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([48.8566, 2.3522], 15);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+     // --- 核心邏輯更新 ---
 
-        const eventLayer = L.layerGroup().addTo(map);
-        const userLayer = L.layerGroup().addTo(map);
-        const facilityLayers = {};
-        let activeTags = new Set();
+// 1. 初始不渲染活動，改由用戶觸發
+let isDiscoveryMode = false;
 
-        // 2. 修復 GPS 定位
-        function startTracking() {
-            map.locate({ setView: true, watch: true, enableHighAccuracy: true });
+// 2. 模擬 AI 搜尋 (實際開發時會對接 API)
+async function startDiscovery() {
+    // 顯示載入中動畫 (可選)
+    console.log("AI 正在掃描周邊 10 公里藝文活動...");
+    
+    // 取得當前中心點
+    const center = map.getCenter();
+    
+    // 模擬 AI 從數據庫抓回來的親子友善活動
+    const aiFoundEvents = [
+        { 
+            id: 101, name: "🎨 龐畢度：感官工作坊", 
+            lat: center.lat + 0.005, lon: center.lng + 0.008,
+            dateRange: "2026/02/05-2026/02/10", timeRange: "10:00-12:00",
+            info: "專為 2-5 歲幼兒設計。場內設有推車停放區。",
+            friendlyNote: "✅ 備有溫奶器 | ✅ 地面防撞處理"
+        },
+        { 
+            id: 102, name: "🎼 塞納河畔：寶寶音樂會", 
+            lat: center.lat - 0.003, lon: center.lng - 0.005,
+            dateRange: "2026/02/04", timeRange: "15:00-16:30",
+            info: "露天輕音樂演奏，歡迎帶野餐墊。",
+            friendlyNote: "✅ 戶外通風 | ⚠️ 最近公廁需步行 3 分鐘"
         }
-        
-        map.on('locationfound', (e) => {
-            userLayer.clearLayers();
-            L.marker(e.latlng, { 
-                icon: L.divIcon({ className: 'user-location-dot', iconSize: [14, 14] }),
-                zIndexOffset: 2000 
-            }).addTo(userLayer);
+    ];
+
+    renderEvents(aiFoundEvents);
+    isDiscoveryMode = true;
+    
+    // 自動縮放地圖以容納活動
+    const group = new L.featureGroup(eventLayer.getLayers());
+    map.fitBounds(group.getBounds().pad(0.1));
+}
+
+// 3. 修改 renderEvents 接收資料
+function renderEvents(data) {
+    eventLayer.clearLayers();
+    data.forEach(evt => {
+        const icon = L.divIcon({ 
+            className: '', 
+            html: `<div class="event-marker">✨</div>`, 
+            iconSize: [36, 36] 
         });
-
-        // 3. 設施搜尋邏輯
-        function toggleTag(type, btn) {
-            if (activeTags.has(type)) {
-                activeTags.delete(type);
-                btn.classList.remove('tag-active');
-                if (facilityLayers[type]) map.removeLayer(facilityLayers[type]);
-            } else {
-                activeTags.add(type);
-                btn.classList.add('tag-active');
-                fetchFacility(type);
-            }
-            document.getElementById('re-search-btn').style.display = (activeTags.size > 0) ? 'flex' : 'none';
-        }
-
-        async function fetchFacility(type) {
-            if (!facilityLayers[type]) facilityLayers[type] = L.layerGroup().addTo(map);
-            facilityLayers[type].clearLayers();
-            const b = map.getBounds();
-            const q = `[out:json];node["amenity"="${type}"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});out;`;
-            try {
-                const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
-                const data = await res.json();
-                data.elements.forEach(el => {
-                    L.marker([el.lat, el.lon], { icon: L.divIcon({ className: 'w-2 h-2 bg-amber-400 rounded-full border border-white', iconSize: [8, 8] }) }).addTo(facilityLayers[type]);
-                });
-            } catch (e) { console.error(e); }
-        }
-
-        function refreshAllActiveTags() { activeTags.forEach(t => fetchFacility(t)); }
-
-        // 4. 活動詳情 (含正確日期格式)
-        const events = [
-            { 
-                id: 1, name: "🎨 羅浮宮：小小藝術家", lat: 48.8606, lon: 2.3376, 
-                dateRange: "2026/02/03-2026/02/04", timeRange: "14:00-18:00", 
-                info: "這是一個專為親子設計的藝術探索行程。" 
-            }
-        ];
-
-        function renderEvents() {
-            events.forEach(evt => {
-                L.marker([evt.lat, evt.lon], { 
-                    icon: L.divIcon({ className: '', html: `<div class="event-marker">✨</div>`, iconSize: [32, 32] }),
-                    zIndexOffset: 1000 
-                }).addTo(eventLayer).on('click', (e) => {
-                    L.DomEvent.stopPropagation(e);
-                    openEventDetail(evt);
-                });
+        L.marker([evt.lat, evt.lon], { icon, zIndexOffset: 1000 })
+            .addTo(eventLayer)
+            .on('click', (e) => {
+                L.DomEvent.stopPropagation(e);
+                openEventDetail(evt);
             });
-        }
+    });
+}
 
-        function openEventDetail(evt) {
-            document.getElementById('drawer-content').innerHTML = `
-                <div class="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <p class="text-emerald-500 font-black text-[10px] mb-0.5">📅 ${evt.dateRange} | 🕒 ${evt.timeRange}</p>
-                    <h3 class="text-lg font-black text-gray-900 mb-1">${evt.name}</h3>
-                    <p class="text-gray-500 text-[11px] mb-4">${evt.info}</p>
-                    <div class="flex gap-2">
-                        <button class="flex-1 py-2.5 bg-gray-50 rounded-xl font-black text-gray-400 text-xs border border-gray-100">如何前往</button>
-                        <button class="flex-1 py-2.5 bg-emerald-500 text-white rounded-xl font-black shadow-md text-xs">我要採集</button>
-                    </div>
-                </div>`;
-        }
-
-        function resetDrawer() {
-            document.getElementById('drawer-content').innerHTML = `
-                <div class="flex justify-between items-center text-center">
-                    <div class="flex flex-col items-center gap-1"><div class="w-10 h-10 bg-amber-400 text-white rounded-xl flex items-center justify-center text-lg">🧭</div><span class="text-[10px] font-black">探索</span></div>
-                    <div class="flex flex-col items-center gap-1 opacity-25"><div class="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-lg">🛒</div><span class="text-[10px] font-black">支援</span></div>
-                    <div class="flex flex-col items-center gap-1 opacity-25"><div class="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-lg">🔧</div><span class="text-[10px] font-black">貢獻</span></div>
-                    <div class="flex flex-col items-center gap-1 opacity-25"><div class="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-lg">🧧</div><span class="text-[10px] font-black">其他</span></div>
-                </div>`;
-        }
-
-        map.on('click', resetDrawer);
-        window.onload = () => { renderEvents(); startTracking(); };
+// 4. 更新 UI 點擊事件：點擊「探索」分頁觸發
+// 在 HTML 的「探索」按鈕加上 onclick="startDiscovery()"
     </script>
 </body>
 </html>
