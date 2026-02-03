@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Glowy GO ! | 生命史採集</title>
+    <title>Glowy GO !</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;900&display=swap" rel="stylesheet">
@@ -11,13 +11,15 @@
         body { font-family: 'Noto Sans TC', sans-serif; overflow: hidden; background: #f8f9fa; }
         #map { height: 100vh; width: 100vw; z-index: 1; }
         .top-ui { z-index: 1001 !important; }
+        
+        /* 琥珀色設施點 */
         .facility-dot { width: 10px; height: 10px; background: rgba(255, 191, 0, 0.7); border: 2px solid white; border-radius: 50%; pointer-events: none; }
 
-        /* 綠色活動光暈 */
+        /* 綠色活動光暈 (抓寶專用) */
         .event-marker {
-            width: 36px; height: 36px; background: #10B981; border: 3px solid white; border-radius: 50%;
+            width: 38px; height: 38px; background: #10B981; border: 3px solid white; border-radius: 50%;
             display: flex; align-items: center; justify-content: center; font-size: 18px; 
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.6); position: relative;
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.6); position: relative;
         }
         .event-marker::after {
             content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%;
@@ -26,10 +28,9 @@
         @keyframes pulse-green { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(2.5); opacity: 0; } }
 
         .user-dot { width: 18px; height: 18px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 15px rgba(59,130,246,0.6); }
-        #capture-page { display: none; z-index: 4000; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* 抽屜過渡動畫 */
+        /* 抽屜樣式 */
         .drawer-hidden { transform: translateY(100%); }
         .drawer-visible { transform: translateY(0); }
     </style>
@@ -39,11 +40,17 @@
     <div class="top-ui fixed top-4 left-0 right-0 px-4 flex items-center gap-3">
         <div class="flex-grow bg-white/95 backdrop-blur h-14 rounded-full shadow-xl flex items-center px-5 gap-3 border border-gray-100">
             <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="3"></path></svg>
-            <input type="text" placeholder="探索身邊的寶物活動..." class="bg-transparent border-none focus:ring-0 text-sm w-full font-medium">
+            <input type="text" placeholder="要去哪裡玩？(巴黎、台北...)" class="bg-transparent border-none focus:ring-0 text-sm w-full font-medium">
         </div>
         <div class="w-14 h-14 bg-white rounded-full shadow-xl border-2 border-white overflow-hidden active:scale-90 transition-all">
             <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Lucky" class="w-full h-full object-cover">
         </div>
+    </div>
+
+    <div class="top-ui fixed top-24 left-0 right-0 flex gap-2 px-4 overflow-x-auto no-scrollbar">
+        <button onclick="updateFacilities('baby_care')" class="flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 active:bg-amber-400 active:text-white transition-all">🍼 哺乳室</button>
+        <button onclick="updateFacilities('toilets')" class="flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 active:bg-amber-400 active:text-white transition-all">🚾 公廁</button>
+        <button onclick="updateFacilities('drinking_water')" class="flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 active:bg-amber-400 active:text-white transition-all">💧 飲水機</button>
     </div>
 
     <div id="map"></div>
@@ -51,16 +58,22 @@
     <div id="drawer" class="fixed bottom-0 left-0 right-0 z-[2000] bg-white rounded-t-[40px] shadow-[0_-15px_50px_rgba(0,0,0,0.15)] px-8 pt-4 pb-12 transition-all duration-500 drawer-hidden border-t border-gray-100">
         <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8 cursor-pointer" onclick="closeDrawer()"></div>
         <div id="drawer-content">
+            <div class="flex justify-between items-center text-center">
+                <div class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-amber-400 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-amber-100">🧭</div><span class="text-xs font-black">探索</span></div>
+                <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🛒</div><span class="text-xs font-black">支援</span></div>
+                <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🔧</div><span class="text-xs font-black">貢獻</span></div>
+                <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🧧</div><span class="text-xs font-black">其他</span></div>
             </div>
+        </div>
     </div>
 
-    <div id="capture-page" class="fixed inset-0 bg-white overflow-y-auto px-6 py-12">
-        <div class="flex justify-between items-center mb-12">
-            <button onclick="closeCapture()" class="text-gray-300 font-bold tracking-widest">✕ 取消</button>
+    <div id="capture-page" class="fixed inset-0 bg-white overflow-y-auto px-6 py-12 hidden z-[4000]">
+        <div class="flex justify-between items-center mb-10">
+            <button onclick="closeCapture()" class="text-gray-300 font-bold">✕ 取消</button>
             <h2 class="text-xl font-black italic tracking-tighter text-emerald-600 uppercase">New Moment</h2>
             <div class="w-10"></div>
         </div>
-        <div class="max-w-md mx-auto space-y-10">
+        <div class="max-w-md mx-auto space-y-8">
             <div class="bg-emerald-50 p-5 rounded-[24px] border border-emerald-100 flex items-center gap-4">
                 <span class="text-3xl">👶</span>
                 <div>
@@ -69,31 +82,29 @@
                 </div>
             </div>
             <div>
-                <label class="block text-sm font-black mb-4 flex justify-between">
-                    <span>📸 影像存檔</span>
-                    <span id="img-status" class="text-emerald-500 text-[10px] hidden">✓ 已選擇</span>
-                </label>
-                <div onclick="document.getElementById('file-input').click()" id="upload-box" class="w-full h-64 bg-gray-50 border-4 border-dashed border-gray-100 rounded-[40px] flex flex-col items-center justify-center gap-3 text-gray-400 active:scale-95 transition-all">
+                <label class="block text-sm font-black mb-4">📸 影像存檔</label>
+                <div onclick="document.getElementById('file-input').click()" id="upload-box" class="w-full h-60 bg-gray-50 border-4 border-dashed border-gray-100 rounded-[32px] flex flex-col items-center justify-center gap-3 text-gray-400 active:scale-95 transition-all">
                     <span class="text-4xl" id="upload-icon">➕</span>
                     <span class="text-sm font-black text-gray-300">加入照片或影片</span>
                     <input type="file" id="file-input" class="hidden" onchange="checkUpload()">
                 </div>
             </div>
             <div>
-                <label class="block text-sm font-black mb-4">✍️ 此刻的心情</label>
-                <textarea id="mood-text" class="w-full bg-gray-50 rounded-[32px] p-6 border-none focus:ring-2 focus:ring-emerald-400 min-h-[180px] shadow-inner" placeholder="這段時光有什麼特別的意義..."></textarea>
+                <label class="block text-sm font-black mb-4">✍️ 此刻的心情文字</label>
+                <textarea id="mood-text" class="w-full bg-gray-50 rounded-[24px] p-6 border-none focus:ring-2 focus:ring-emerald-400 min-h-[150px] shadow-inner" placeholder="這段時光有什麼特別的意義..."></textarea>
             </div>
-            <button onclick="finishCapture()" class="w-full bg-gray-900 text-white py-6 rounded-[32px] font-black shadow-2xl active:scale-95 transition-all text-xl tracking-widest">確認送出</button>
+            <button onclick="finishCapture()" class="w-full bg-gray-900 text-white py-6 rounded-[24px] font-black shadow-2xl active:scale-95 transition-all text-xl">確認送出</button>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // 初始化地圖
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([48.8566, 2.3522], 15);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-        // 點擊地圖空白處收回抽屜
-        map.on('click', closeDrawer);
+        // 點擊地圖空白處收回抽屜 (回歸預設架構)
+        map.on('click', resetDrawer);
 
         let eventLayer = L.layerGroup().addTo(map);
         const events = [
@@ -103,9 +114,9 @@
 
         function renderEvents() {
             events.forEach(evt => {
-                const icon = L.divIcon({ className: '', html: `<div class="event-marker">✨</div>`, iconSize: [36, 36] });
+                const icon = L.divIcon({ className: '', html: `<div class="event-marker">✨</div>`, iconSize: [38, 38] });
                 L.marker([evt.lat, evt.lon], { icon }).addTo(eventLayer).on('click', (e) => {
-                    L.DomEvent.stopPropagation(e); // 防止觸發地圖點擊事件
+                    L.DomEvent.stopPropagation(e);
                     openEventDetail(evt);
                 });
             });
@@ -118,8 +129,8 @@
                     <p class="text-emerald-500 font-black text-sm mb-2 italic">🕒 ${evt.time}</p>
                     <h3 class="text-3xl font-black text-gray-900 leading-tight mb-3">${evt.name}</h3>
                     <p class="text-gray-500 text-sm font-medium leading-relaxed mb-8">${evt.summary}</p>
-                    <div class="flex items-center gap-2 mb-8 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 p-3 rounded-xl">
-                        📍 ${evt.location} <span class="ml-auto text-emerald-600 font-black tracking-normal">⛅ 8°C</span>
+                    <div class="flex items-center gap-2 mb-8 text-[10px] font-black text-gray-400 tracking-widest bg-gray-50 p-3 rounded-xl uppercase">
+                        📍 ${evt.location} <span class="ml-auto text-emerald-600">⛅ 8°C</span>
                     </div>
                     <div class="flex gap-4">
                         <button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${evt.lat},${evt.lon}')" class="flex-1 border-2 border-gray-100 py-5 rounded-[24px] font-black text-gray-700 active:bg-gray-50 transition-colors">如何前往</button>
@@ -127,27 +138,33 @@
                     </div>
                 </div>
             `;
-            drawer.classList.remove('drawer-hidden');
-            drawer.classList.add('drawer-visible');
+            drawer.classList.replace('drawer-hidden', 'drawer-visible');
             map.flyTo([evt.lat, evt.lon], 16);
         }
 
-        function closeDrawer() {
+        function resetDrawer() {
+            // 點擊空白處不只是收起來，而是回到原本的 4 分頁導航列
             const drawer = document.getElementById('drawer');
-            drawer.classList.add('drawer-hidden');
-            drawer.classList.remove('drawer-visible');
+            document.getElementById('drawer-content').innerHTML = `
+                <div class="flex justify-between items-center text-center">
+                    <div class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-amber-400 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-amber-100">🧭</div><span class="text-xs font-black">探索</span></div>
+                    <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🛒</div><span class="text-xs font-black">支援</span></div>
+                    <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🔧</div><span class="text-xs font-black">貢獻</span></div>
+                    <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🧧</div><span class="text-xs font-black">其他</span></div>
+                </div>
+            `;
+            // 如果要完全收起，可以使用 drawer.classList.replace('drawer-visible', 'drawer-hidden');
         }
 
-        function goToCapture() { document.getElementById('capture-page').style.display = 'block'; }
-        function closeCapture() { document.getElementById('capture-page').style.display = 'none'; }
+        function closeDrawer() { document.getElementById('drawer').classList.replace('drawer-visible', 'drawer-hidden'); }
+        function goToCapture() { document.getElementById('capture-page').classList.remove('hidden'); }
+        function closeCapture() { document.getElementById('capture-page').classList.add('hidden'); }
 
-        // 檢查影像是否有選取
         function checkUpload() {
             const file = document.getElementById('file-input').files[0];
             if(file) {
-                document.getElementById('img-status').classList.remove('hidden');
-                document.getElementById('upload-box').classList.add('border-emerald-200', 'bg-emerald-50');
-                document.getElementById('upload-icon').innerText = '✅';
+                document.getElementById('upload-box').classList.add('bg-emerald-50', 'border-emerald-200');
+                document.getElementById('upload-icon').innerText = "✅";
             }
         }
 
@@ -155,25 +172,20 @@
             const file = document.getElementById('file-input').files[0];
             const mood = document.getElementById('mood-text').value;
 
-            if (!file) {
-                alert("無法成功：您尚未加入這段時光的照片或影片。");
-                return;
-            }
-            if (!mood.trim()) {
-                alert("無法成功：心情文字欄位還空空的，寫下一些紀念吧！");
-                return;
-            }
+            if (!file) { alert("無法成功：您尚未加入這段時光的照片或影片。"); return; }
+            if (!mood.trim()) { alert("無法成功：心情文字欄位還空空的，寫下一些紀念吧！"); return; }
 
             alert("採集成功！");
             closeCapture();
-            closeDrawer();
-            // 清空內容以備下次使用
-            document.getElementById('file-input').value = "";
-            document.getElementById('mood-text').value = "";
-            document.getElementById('img-status').classList.add('hidden');
+            resetDrawer();
         }
 
-        window.onload = () => { renderEvents(); map.locate({ setView: true }); };
+        window.onload = () => { 
+            renderEvents(); 
+            map.locate({ setView: true }); 
+            // 初始顯示導航列
+            document.getElementById('drawer').classList.replace('drawer-hidden', 'drawer-visible');
+        };
     </script>
 </body>
 </html>
