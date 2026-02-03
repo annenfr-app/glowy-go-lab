@@ -2,122 +2,72 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Glowy GO ! | 正式佈局</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Glowy GO ! | 2026 官方原型</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --amber: #FFBF00; --bg: #fdfaf5; --text: #333; }
+        :root { --amber: #FFBF00; --bg: #fdfaf5; }
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, sans-serif; background: var(--bg); }
 
+        /* 地圖底層 */
         #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 1; }
 
-        /* 1. 頂部搜尋與頭貼區 */
-        .top-interface {
-            position: absolute; top: env(safe-area-inset-top, 15px); left: 15px; right: 15px;
-            z-index: 1000; display: flex; flex-direction: column; gap: 12px;
+        /* 1. 頂部搜尋條 + 右上角頭貼 */
+        .top-ui {
+            position: absolute; top: calc(env(safe-area-inset-top) + 10px); left: 12px; right: 12px;
+            z-index: 1000; display: flex; flex-direction: column; gap: 10px;
         }
-        .search-row { display: flex; gap: 10px; align-items: center; }
-        .search-bar {
+        .search-row { display: flex; align-items: center; gap: 10px; }
+        .search-input {
             flex: 1; background: white; height: 48px; border-radius: 24px;
-            display: flex; align-items: center; padding: 0 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); font-size: 15px; color: #888;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; align-items: center;
+            padding: 0 18px; color: #666; font-size: 15px; border: 1px solid rgba(0,0,0,0.05);
         }
         .user-avatar {
-            width: 48px; height: 48px; border-radius: 24px; background: #eee;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 2px solid white;
-            cursor: pointer; overflow: hidden;
+            width: 45px; height: 45px; border-radius: 50%; background: #eee;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15); border: 2px solid white;
+            cursor: pointer; overflow: hidden; flex-shrink: 0;
         }
 
-        /* 2. 第二排 Tags (橫向滑動) */
-        .tags-container {
+        /* 2. 第二排 Tags (橫向捲動) */
+        .tags-scroll {
             display: flex; gap: 8px; overflow-x: auto; padding-bottom: 5px;
-            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; scrollbar-width: none;
         }
-        .tags-container::-webkit-scrollbar { display: none; } /* Chrome/Safari */
-        .tag {
+        .tags-scroll::-webkit-scrollbar { display: none; }
+        .tag-chip {
             background: white; padding: 8px 16px; border-radius: 18px;
-            white-space: nowrap; font-size: 13px; font-weight: 500;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #eee;
+            font-size: 13px; font-weight: 500; white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);
         }
 
-        /* 3. 底部功能列 (Tab Bar) */
+        /* 3. 底部功能導覽列 */
         .bottom-nav {
-            position: fixed; bottom: 0; left: 0; right: 0; height: 70px;
-            background: white; z-index: 2000; display: flex;
-            justify-content: space-around; align-items: center;
-            border-top: 1px solid #eee; padding-bottom: env(safe-area-inset-bottom);
+            position: fixed; bottom: 0; left: 0; right: 0; height: 75px;
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+            z-index: 2000; display: flex; border-top: 1px solid #eee;
+            padding-bottom: env(safe-area-inset-bottom);
         }
-        .nav-item { text-align: center; color: #888; font-size: 11px; cursor: pointer; flex: 1; }
-        .nav-item.active { color: var(--amber); }
-        .nav-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+        .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; font-size: 11px; }
+        .nav-tab.active { color: var(--amber); }
+        .nav-icon { font-size: 22px; margin-bottom: 3px; }
 
-        /* 4. 會員中心彈窗 (從頭貼進入) */
+        /* GPS 定位按鈕 (Google Maps 風格) */
+        .locate-btn {
+            position: absolute; bottom: 95px; right: 15px; z-index: 1000;
+            background: white; width: 45px; height: 45px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2); cursor: pointer; font-size: 20px;
+        }
+
+        /* 個人中心側邊欄 */
         #user-panel {
             position: fixed; top: 0; right: -100%; width: 85%; height: 100%;
-            background: white; z-index: 3000; transition: 0.3s;
+            background: white; z-index: 3000; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             padding: 40px 25px; box-sizing: border-box;
         }
         #user-panel.open { right: 0; }
-        .user-info-section { margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
     </style>
-</head>
-<body>
-
-    <div id="map"></div>
-
-    <div class="top-interface">
-        <div class="search-row">
-            <div class="search-bar">🔍 搜尋活動、設施或關鍵字...</div>
-            <div class="user-avatar" onclick="toggleUserPanel()">
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Glowy" alt="avatar" style="width:100%">
-            </div>
-        </div>
-        <div class="tags-container">
-            <div class="tag">🍼 哺乳室</div>
-            <div class="tag">🎡 抓寶活動</div>
-            <div class="tag">☕ 親子友善</div>
-            <div class="tag">🎒 托育設施</div>
-            <div class="tag">💧 飲水機</div>
-        </div>
-    </div>
-
-    <div id="user-panel">
-        <div onclick="toggleUserPanel()" style="font-size: 24px; margin-bottom: 20px;">✕</div>
-        <div class="user-info-section">
-            <h2 style="margin:0;">User_8824</h2>
-            <div style="color:var(--amber); font-weight:bold; margin-top:5px;">💎 25 累積點數</div>
-        </div>
-        <div class="menu-list">
-            <div style="padding:15px 0; border-bottom:1px solid #f5f5f5;">👶 寶寶資料 (0-10歲)</div>
-            <div style="padding:15px 0; border-bottom:1px solid #f5f5f5;">📜 歷史紀錄 (活動足跡)</div>
-            <div style="padding:15px 0; border-bottom:1px solid #f5f5f5;">❤️ 個人偏好設定</div>
-            <div style="padding:15px 0; border-bottom:1px solid #f5f5f5;">💳 採購紀錄 (Collect)</div>
-        </div>
-    </div>
-
-    <div class="bottom-nav">
-        <div class="nav-item active">
-            <span class="nav-icon">🗺️</span>地圖
-        </div>
-        <div class="nav-item">
-            <span class="nav-icon">✍️</span>貢獻
-        </div>
-        <div class="nav-item">
-            <span class="nav-icon">📸</span>精彩時刻
-        </div>
-        <div class="nav-item">
-            <span class="nav-icon">🗂️</span>卡包
-        </div>
-    </div>
-
-    <script>
-        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([25.0339, 121.5644], 14);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
-
-        function toggleUserPanel() {
-            document.getElementById('user-panel').classList.toggle('open');
-        }
-    </script>
-</body>
-</html>
+</
+    
