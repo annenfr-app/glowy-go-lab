@@ -20,6 +20,12 @@
             background: white; padding: 8px 20px; border-radius: 30px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.15); font-weight: bold; font-size: 14px;
         }
+        @keyframes ping {
+  75%, 100% { transform: scale(2); opacity: 0; }
+}
+.animate-ping {
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
     </style>
 </head>
 <body class="bg-gray-50">
@@ -62,98 +68,66 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-    // 1. 初始化地圖：預設中心點設在巴黎 (你目前所在地)
-    const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([48.8566, 2.3522], 13);
+   // 1. 新增：活動點圖層
+let eventLayer = L.layerGroup().addTo(map);
+
+// 2. 模擬活動資料 (寶物) - 未來可對接你的活動資料庫
+const mockEvents = [
+    { id: 1, name: "🎨 羅浮宮親子工作坊", lat: 48.8606, lon: 2.3376, desc: "適合 3-6 歲，探索藝術之美" },
+    { id: 2, name: "🎪 杜樂麗親子嘉年華", lat: 48.8635, lon: 2.3275, desc: "週末限定！旋轉木馬與創意市集" },
+    { id: 3, name: "📖 莎士比亞書店故事會", lat: 48.8525, lon: 2.3471, desc: "聽英語繪本故事，採集文學能量" }
+];
+
+// 3. 渲染活動點函式
+function renderEvents() {
+    eventLayer.clearLayers();
     
-    // 使用免費且快速的圖資來源
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
-
-    let facilityLayer = L.layerGroup().addTo(map);
-    let userMarker = null;
-    let currentType = 'baby_care'; // 預設顯示哺乳室
-
-    // 2. 偵測使用者移動地圖：顯示「搜尋此區域」按鈕
-    map.on('moveend', () => {
-        document.getElementById('search-this-area').style.display = 'block';
+    // 定義琥珀色大點的 CSS (帶有呼吸燈動畫)
+    const eventIcon = L.divIcon({
+        className: 'event-marker-container',
+        html: `
+            <div class="relative flex items-center justify-center">
+                <div class="absolute w-10 h-10 bg-amber-400 rounded-full animate-ping opacity-20"></div>
+                <div class="w-6 h-6 bg-amber-500 border-2 border-white rounded-full shadow-lg flex items-center justify-center text-[10px]">✨</div>
+            </div>
+        `,
+        iconSize: [40, 40]
     });
 
-    // 3. 核心定位函式：強制開啟最高精確度
-    function locateUser() {
-        map.locate({ 
-            setView: true, 
-            maxZoom: 16, 
-            enableHighAccuracy: true, // 強制使用 GPS 晶片，提升準確度
-            maximumAge: 0             // 不使用舊的緩存座標
+    mockEvents.forEach(evt => {
+        L.marker([evt.lat, evt.lon], { icon: eventIcon })
+        .addTo(eventLayer)
+        .on('click', () => {
+            showEventDetail(evt); // 點擊活動點觸發細節
         });
-    }
-
-    // 定位成功回傳處理
-    map.on('locationfound', (e) => {
-        console.log("GPS 定位成功");
-        if (userMarker) map.removeLayer(userMarker);
-        
-        // 建立藍點 (使用者位置)
-        userMarker = L.marker(e.latlng, { 
-            icon: L.divIcon({ className: 'user-dot', iconSize: [18, 18] }) 
-        }).addTo(map);
-        
-        map.flyTo(e.latlng, 16); // 飛向定位點
-        updateData();            // 定位成功後自動抓取附近設施
     });
+}
 
-    // 定位失敗回傳處理
-    map.on('locationerror', () => {
-        alert("定位失敗！請點擊網址列左側圖示，確認「位置資訊」權限已改為「允許」。");
-    });
+// 4. 顯示活動細節 (與底部抽屜互動)
+function showEventDetail(evt) {
+    // 這裡我們先用簡單的彈窗模擬，下一步可以實作抽屜升起
+    const detailHtml = `
+        <div class="p-4">
+            <h3 class="font-bold text-lg text-amber-600">${evt.name}</h3>
+            <p class="text-sm text-gray-600 mt-1">${evt.desc}</p>
+            <button onclick="startCapture(${evt.id})" class="w-full mt-4 bg-amber-500 text-white py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-all">
+                📍 前往採集寶物
+            </button>
+        </div>
+    `;
+    
+    // 讓地圖飛向該點
+    map.flyTo([evt.lat, evt.lon], 17);
+    
+    // 這裡可以將 detailHtml 塞入你的底部抽屜 Div
+    alert(`發現寶物：${evt.name}\n${evt.desc}`);
+}
 
-    // 4. 抓取全球 OpenData 設施資料 (Overpass API)
-    async function updateData(type) {
-        if(type) currentType = type; // 如果有傳入類型則更新
-        
-        // 隱藏「搜尋此區」按鈕，避免重複點擊
-        document.getElementById('search-this-area').style.display = 'none';
-        
-        const bounds = map.getBounds();
-        const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
-        
-        // 針對歐洲地區優化的標籤查詢
-        let queryTag = '';
-        if(currentType === 'baby_care') queryTag = `nwr["amenity"~"baby_care|changing_room|baby_hatch"](${bbox});nwr["changing_table"="yes"](${bbox});`;
-        if(currentType === 'toilets') queryTag = `nwr["amenity"="toilets"](${bbox});`;
-        if(currentType === 'drinking_water') queryTag = `nwr["amenity"="drinking_water"](${bbox});`;
-
-        // 使用全球負載平衡的 Overpass 伺服器
-        const url = `https://overpass-api.de/api/interpreter?data=[out:json][timeout:25];(${queryTag});out center;`;
-
-        try {
-            const res = await fetch(url);
-            const data = await res.json();
-            
-            facilityLayer.clearLayers(); // 清除舊有的點位
-            
-            data.elements.forEach(el => {
-                const lat = el.lat || (el.center && el.center.lat);
-                const lon = el.lon || (el.center && el.center.lon);
-                if (lat && lon) {
-                    // 繪製透明小黃點 (設施標記)
-                    L.circleMarker([lat, lon], {
-                        radius: 6,
-                        fillColor: "#FFBF00",
-                        color: "#fff",
-                        weight: 2,
-                        opacity: 1,
-                        fillOpacity: 0.6 // 透明感
-                    }).addTo(facilityLayer);
-                }
-            });
-            console.log(`成功載入 ${data.elements.length} 個設施點`);
-        } catch (err) {
-            console.error("圖資抓取過於頻繁，請稍候再試");
-        }
-    }
-
-    // 5. 頁面啟動時自動檢查授權並定位
-    window.onload = locateUser;
+// 5. 在 window.onload 中加入渲染
+window.onload = () => {
+    handlePermissionAndLocate();
+    renderEvents(); // 初始化活動點
+};
 </script>
 
 </body>
