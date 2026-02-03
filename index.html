@@ -3,132 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Glowy GO !</title>
+    <title>Glowy GO ! | 紀錄孩子的生命印記</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
     <style>
-        body { margin: 0; overflow: hidden; font-family: sans-serif; }
-        #map { height: 100vh; width: 100vw; background: #f8f9fa; }
-        .user-dot { width: 18px; height: 18px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 15px rgba(59,130,246,0.6); }
-        .facility-dot { width: 12px; height: 12px; background: rgba(255, 191, 0, 0.7); border: 2px solid white; border-radius: 50%; pointer-events: none; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
+        body { font-family: 'Noto Sans TC', sans-serif; overflow: hidden; touch-action: manipulation; }
+        #map { height: 100vh; width: 100vw; z-index: 1; background: #f8f9fa; }
         
-        /* 搜尋此區域按鈕樣式 */
+        /* 使用者位置 (藍點) */
+        .user-dot { width: 18px; height: 18px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 15px rgba(59,130,246,0.6); }
+        
+        /* 設施點 (透明小黃點) */
+        .facility-dot { width: 12px; height: 12px; background: rgba(255, 191, 0, 0.6); border: 2px solid white; border-radius: 50%; pointer-events: none; }
+        
+        /* 琥珀色活動點 (寶物 - 帶有呼吸動畫) */
+        .event-marker {
+            position: relative; width: 30px; height: 30px;
+            background: #FFBF00; border: 3px solid white; border-radius: 50%;
+            display: flex; items-center; justify-center; font-size: 14px;
+            box-shadow: 0 0 15px rgba(255,191,0,0.8);
+        }
+        .event-marker::after {
+            content: ''; position: absolute; width: 100%; height: 100%;
+            border-radius: 50%; background: #FFBF00; opacity: 0.4;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.4; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
         #search-this-area {
             position: fixed; top: 140px; left: 50%; transform: translateX(-50%);
             z-index: 1000; display: none;
-            background: white; padding: 8px 20px; border-radius: 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15); font-weight: bold; font-size: 14px;
+            background: white; padding: 10px 24px; border-radius: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15); font-weight: bold; color: #333;
         }
-        @keyframes ping {
-  75%, 100% { transform: scale(2); opacity: 0; }
-}
-.animate-ping {
-  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 text-gray-900">
 
     <div class="fixed top-4 left-0 right-0 z-[1000] px-4 flex items-center gap-3">
-        <div class="flex-grow bg-white/95 backdrop-blur h-12 rounded-full shadow-lg flex items-center px-4 gap-3 border border-gray-100">
+        <div class="flex-grow bg-white/95 backdrop-blur h-12 rounded-full shadow-lg flex items-center px-4 gap-3 border border-gray-100 shadow-amber-100/50">
             <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2"></path></svg>
-            <span class="text-gray-400 text-sm">要去哪裡玩？(巴黎、台北...)</span>
+            <span class="text-gray-400 text-sm font-medium">要去哪裡採集生命史？</span>
         </div>
         <div class="w-12 h-12 bg-white rounded-full shadow-lg border-2 border-amber-200 flex items-center justify-center overflow-hidden">
-            <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Lucky" class="w-full h-full">
+            <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Lucky" class="w-full h-full object-cover">
         </div>
     </div>
 
     <div class="fixed top-20 left-0 right-0 z-[1000] flex gap-2 px-4 overflow-x-auto no-scrollbar">
-        <button onclick="currentType='baby_care'; updateData();" class="flex-shrink-0 px-5 py-2 bg-white rounded-full shadow-md text-xs font-bold border active:bg-amber-50">🍼 哺乳室</button>
-        <button onclick="currentType='toilets'; updateData();" class="flex-shrink-0 px-5 py-2 bg-white rounded-full shadow-md text-xs font-bold border active:bg-amber-50">🚾 公廁</button>
-        <button onclick="currentType='drinking_water'; updateData();" class="flex-shrink-0 px-5 py-2 bg-white rounded-full shadow-md text-xs font-bold border active:bg-amber-50">💧 飲水機</button>
+        <button onclick="changeType('baby_care')" class="flex-shrink-0 px-5 py-2 bg-white rounded-full shadow-md text-xs font-bold border active:bg-amber-50">🍼 哺乳室</button>
+        <button onclick="changeType('toilets')" class="flex-shrink-0 px-5 py-2 bg-white rounded-full shadow-md text-xs font-bold border active:bg-amber-50">🚾 公廁</button>
+        <button onclick="changeType('drinking_water')" class="flex-shrink-0 px-5 py-2 bg-white rounded-full shadow-md text-xs font-bold border active:bg-amber-50">💧 飲水機</button>
     </div>
 
-    <button id="search-this-area" onclick="updateData()">
-        🔄 搜尋此區域的設施
-    </button>
+    <button id="search-this-area" onclick="updateData()">🔄 搜尋此區域設施</button>
 
-    <button class="fixed right-6 top-36 z-[1000] w-12 h-12 bg-white rounded-full shadow-xl flex items-center justify-center text-blue-500 border" onclick="locateUser()">
+    <button class="fixed right-6 top-36 z-[1000] w-12 h-12 bg-white rounded-full shadow-xl flex items-center justify-center text-blue-500 border border-gray-100 active:scale-90 transition-all" onclick="handlePermissionAndLocate()">
         <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
     </button>
 
     <div id="map"></div>
 
-    <div class="fixed bottom-0 left-0 right-0 z-[2000] bg-white rounded-t-[32px] shadow-[0_-10px -30px_rgba(0,0,0,0.1)] px-8 pt-4 pb-10">
+    <div id="main-drawer" class="fixed bottom-0 left-0 right-0 z-[2000] bg-white rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] px-8 pt-4 pb-10 transition-transform duration-300">
         <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
-        <div class="flex justify-between items-center text-center">
+        <div id="drawer-content" class="flex justify-between items-center text-center">
             <div class="flex flex-col items-center gap-1"><div class="p-3 bg-amber-400 text-white rounded-2xl shadow-lg">🧭</div><span class="text-xs font-bold">探索</span></div>
-            <div class="flex flex-col items-center gap-1 opacity-30 grayscale text-2xl">🛒<span class="text-[10px]">支援</span></div>
-            <div class="flex flex-col items-center gap-1 opacity-30 grayscale text-2xl">🔧<span class="text-[10px]">貢獻</span></div>
-            <div class="flex flex-col items-center gap-1 opacity-30 grayscale text-2xl">🧧<span class="text-[10px]">其他</span></div>
+            <div class="flex flex-col items-center gap-1 opacity-30 grayscale"><div class="p-3 text-2xl">🛒</div><span class="text-xs font-bold">支援</span></div>
+            <div class="flex flex-col items-center gap-1 opacity-30 grayscale"><div class="p-3 text-2xl">🔧</div><span class="text-xs font-bold">貢獻</span></div>
+            <div class="flex flex-col items-center gap-1 opacity-30 grayscale"><div class="p-3 text-2xl">🧧</div><span class="text-xs font-bold">其他</span></div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-   // 1. 新增：活動點圖層
-let eventLayer = L.layerGroup().addTo(map);
+        // 初始化地圖 (預設巴黎)
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([48.8566, 2.3522], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-// 2. 模擬活動資料 (寶物) - 未來可對接你的活動資料庫
-const mockEvents = [
-    { id: 1, name: "🎨 羅浮宮親子工作坊", lat: 48.8606, lon: 2.3376, desc: "適合 3-6 歲，探索藝術之美" },
-    { id: 2, name: "🎪 杜樂麗親子嘉年華", lat: 48.8635, lon: 2.3275, desc: "週末限定！旋轉木馬與創意市集" },
-    { id: 3, name: "📖 莎士比亞書店故事會", lat: 48.8525, lon: 2.3471, desc: "聽英語繪本故事，採集文學能量" }
-];
+        let facilityLayer = L.layerGroup().addTo(map);
+        let eventLayer = L.layerGroup().addTo(map);
+        let userMarker = null;
+        let currentType = 'baby_care';
 
-// 3. 渲染活動點函式
-function renderEvents() {
-    eventLayer.clearLayers();
-    
-    // 定義琥珀色大點的 CSS (帶有呼吸燈動畫)
-    const eventIcon = L.divIcon({
-        className: 'event-marker-container',
-        html: `
-            <div class="relative flex items-center justify-center">
-                <div class="absolute w-10 h-10 bg-amber-400 rounded-full animate-ping opacity-20"></div>
-                <div class="w-6 h-6 bg-amber-500 border-2 border-white rounded-full shadow-lg flex items-center justify-center text-[10px]">✨</div>
-            </div>
-        `,
-        iconSize: [40, 40]
-    });
+        // 模擬寶物活動資料
+        const mockEvents = [
+            { id: 1, name: "🎨 羅浮宮親子藝術季", lat: 48.8606, lon: 2.3376, desc: "在羅浮宮採集第一片藝術史碎片" },
+            { id: 2, name: "🎈 杜樂麗花園嘉年華", lat: 48.8635, lon: 2.3275, desc: "刻畫與孩子在旋轉木馬上的印記" },
+            { id: 3, name: "🥐 法式小廚師工作坊", lat: 48.8525, lon: 2.3471, desc: "紀錄孩子第一次手作美食的感動" }
+        ];
 
-    mockEvents.forEach(evt => {
-        L.marker([evt.lat, evt.lon], { icon: eventIcon })
-        .addTo(eventLayer)
-        .on('click', () => {
-            showEventDetail(evt); // 點擊活動點觸發細節
+        // 核心定位函式
+        async function handlePermissionAndLocate() {
+            map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true, maximumAge: 0 });
+        }
+
+        map.on('locationfound', (e) => {
+            if (userMarker) map.removeLayer(userMarker);
+            userMarker = L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot', iconSize: [18, 18] }) }).addTo(map);
+            updateData(); 
         });
-    });
-}
 
-// 4. 顯示活動細節 (與底部抽屜互動)
-function showEventDetail(evt) {
-    // 這裡我們先用簡單的彈窗模擬，下一步可以實作抽屜升起
-    const detailHtml = `
-        <div class="p-4">
-            <h3 class="font-bold text-lg text-amber-600">${evt.name}</h3>
-            <p class="text-sm text-gray-600 mt-1">${evt.desc}</p>
-            <button onclick="startCapture(${evt.id})" class="w-full mt-4 bg-amber-500 text-white py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-all">
-                📍 前往採集寶物
-            </button>
-        </div>
-    `;
-    
-    // 讓地圖飛向該點
-    map.flyTo([evt.lat, evt.lon], 17);
-    
-    // 這裡可以將 detailHtml 塞入你的底部抽屜 Div
-    alert(`發現寶物：${evt.name}\n${evt.desc}`);
-}
+        map.on('moveend', () => { document.getElementById('search-this-area').style.display = 'block'; });
 
-// 5. 在 window.onload 中加入渲染
-window.onload = () => {
-    handlePermissionAndLocate();
-    renderEvents(); // 初始化活動點
-};
-</script>
+        function changeType(type) {
+            currentType = type;
+            updateData();
+        }
 
+        // 抓取設施 (配角)
+        async function updateData() {
+            document.getElementById('search-this-area').style.display = 'none';
+            const b = map.getBounds();
+            const bbox = `${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}`;
+            
+            let tag = `nwr["amenity"~"baby_care|changing_room|baby_hatch"](${bbox});nwr["changing_table"="yes"](${bbox});`;
+            if(currentType === 'toilets') tag = `nwr["amenity"="toilets"](${bbox});`;
+            if(currentType === 'drinking_water') tag = `nwr["amenity"="drinking_water"](${bbox});`;
+
+            try {
+                const res = await fetch(`https://overpass-api.de/api/interpreter?data=[out:json];(${tag});out center;`);
+                const data = await res.json();
+                facilityLayer.clearLayers();
+                data.elements.forEach(el => {
+                    const lat = el.lat || el.center.lat;
+                    const lon = el.lon || el.center.lon;
+                    L.circleMarker([lat, lon], { radius: 6, fillColor: "#FFBF00", color: "#fff", weight: 2, opacity: 1, fillOpacity: 0.6 }).addTo(facilityLayer);
+                });
+            } catch (err) { console.log("圖資請求稍快"); }
+        }
+
+        // 渲染活動寶物 (主角)
+        function renderEvents() {
+            eventLayer.clearLayers();
+            const eventIcon = L.divIcon({
+                className: '',
+                html: `<div class="event-marker">✨</div>`,
+                iconSize: [30, 30]
+            });
+
+            mockEvents.forEach(evt => {
+                L.marker([evt.lat, evt.lon], { icon: eventIcon }).addTo(eventLayer).on('click', () => showEventDrawer(evt));
+            });
+        }
+
+        // 升起生命史採集抽屜
+        function showEventDrawer(evt) {
+            const content = `
+                <div class="animate-slide-up">
+                    <div class="w-12 h-1.5 bg-gray-100 rounded-full mx-auto mb-6"></div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-amber-100 text-amber-600 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider">Life History +1</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-800">${evt.name}</h2>
+                    <p class="text-gray-500 mt-2 text-sm leading-relaxed">${evt.desc}</p>
+                    <div class="mt-8 flex gap-3">
+                        <button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${evt.lat},${evt.lon}')" class="flex-1 border-2 border-amber-400 text-amber-600 py-4 rounded-2xl font-bold active:bg-amber-50 transition-colors">🗺️ 導航前往</button>
+                        <button onclick="recordLife()" class="flex-[1.5] bg-amber-400 text-white py-4 rounded-2xl font-bold shadow-lg shadow-amber-200 active:scale-95 transition-all">📸 紀錄這段生命史</button>
+                    </div>
+                    <p class="text-center text-gray-400 text-[10px] mt-6 italic">「這不是點數，是您與孩子獨一無二的回憶」</p>
+                </div>
+            `;
+            document.getElementById('drawer-content').innerHTML = content;
+            map.flyTo([evt.lat, evt.lon], 16);
+        }
+
+        function recordLife() {
+            alert("✨ 生命史已紀錄！\n照片與回憶已存入您的個人卡包。");
+            location.reload(); // 暫時重整回首頁
+        }
+
+        window.onload = () => {
+            handlePermissionAndLocate();
+            renderEvents();
+        };
+    </script>
 </body>
 </html>
