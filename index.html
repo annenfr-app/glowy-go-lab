@@ -12,10 +12,10 @@
         #map { height: 100vh; width: 100vw; z-index: 1; }
         .top-ui { z-index: 1001 !important; }
         
-        /* 琥珀色設施點 */
-        .facility-dot { width: 10px; height: 10px; background: rgba(255, 191, 0, 0.7); border: 2px solid white; border-radius: 50%; pointer-events: none; }
+        /* 設施琥珀點 */
+        .facility-dot { width: 12px; height: 12px; background: #FFBF00; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(255,191,0,0.6); }
 
-        /* 綠色活動光暈 (抓寶專用) */
+        /* 活動綠色光暈 */
         .event-marker {
             width: 38px; height: 38px; background: #10B981; border: 3px solid white; border-radius: 50%;
             display: flex; align-items: center; justify-content: center; font-size: 18px; 
@@ -27,36 +27,41 @@
         }
         @keyframes pulse-green { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(2.5); opacity: 0; } }
 
-        .user-dot { width: 18px; height: 18px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 15px rgba(59,130,246,0.6); }
+        .tag-active { background-color: #FFBF00 !important; color: white !important; border-color: #FFBF00 !important; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         
-        /* 抽屜樣式 */
-        .drawer-hidden { transform: translateY(100%); }
-        .drawer-visible { transform: translateY(0); }
+        /* 搜尋按鈕動畫 */
+        #re-search-btn { display: none; transition: opacity 0.3s; }
     </style>
 </head>
 <body class="bg-gray-50">
 
-    <div class="top-ui fixed top-4 left-0 right-0 px-4 flex items-center gap-3">
-        <div class="flex-grow bg-white/95 backdrop-blur h-14 rounded-full shadow-xl flex items-center px-5 gap-3 border border-gray-100">
-            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="3"></path></svg>
-            <input type="text" placeholder="要去哪裡玩？(巴黎、台北...)" class="bg-transparent border-none focus:ring-0 text-sm w-full font-medium">
+    <div class="top-ui fixed top-4 left-0 right-0 px-4 flex flex-col items-center gap-4">
+        <div class="w-full flex items-center gap-3">
+            <div class="flex-grow bg-white/95 backdrop-blur h-14 rounded-full shadow-xl flex items-center px-5 gap-3 border border-gray-100">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="3"></path></svg>
+                <input type="text" placeholder="要去哪裡玩？" class="bg-transparent border-none focus:ring-0 text-sm w-full font-medium">
+            </div>
+            <div class="w-14 h-14 bg-white rounded-full shadow-xl border-2 border-white overflow-hidden">
+                <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Lucky" class="w-full h-full object-cover">
+            </div>
         </div>
-        <div class="w-14 h-14 bg-white rounded-full shadow-xl border-2 border-white overflow-hidden active:scale-90 transition-all">
-            <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Lucky" class="w-full h-full object-cover">
-        </div>
+
+        <button id="re-search-btn" onclick="triggerManualSearch()" class="bg-white px-6 py-2.5 rounded-full shadow-2xl border border-gray-100 text-xs font-black text-gray-800 flex items-center gap-2 active:scale-95 transition-all">
+            <span>🔄</span> 搜尋此區域的設施
+        </button>
     </div>
 
-    <div class="top-ui fixed top-24 left-0 right-0 flex gap-2 px-4 overflow-x-auto no-scrollbar">
-        <button onclick="updateFacilities('baby_care')" class="flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 active:bg-amber-400 active:text-white transition-all">🍼 哺乳室</button>
-        <button onclick="updateFacilities('toilets')" class="flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 active:bg-amber-400 active:text-white transition-all">🚾 公廁</button>
-        <button onclick="updateFacilities('drinking_water')" class="flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 active:bg-amber-400 active:text-white transition-all">💧 飲水機</button>
+    <div id="tag-bar" class="top-ui fixed top-32 left-0 right-0 flex gap-2 px-4 overflow-x-auto no-scrollbar">
+        <button onclick="updateFacilities('baby_care', this)" class="facility-tag flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 transition-all">🍼 哺乳室</button>
+        <button onclick="updateFacilities('toilets', this)" class="facility-tag flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 transition-all">🚾 公廁</button>
+        <button onclick="updateFacilities('drinking_water', this)" class="facility-tag flex-shrink-0 px-5 py-2.5 bg-white rounded-full shadow-md text-xs font-black border border-amber-100 text-gray-700 transition-all">💧 飲水機</button>
     </div>
 
     <div id="map"></div>
 
-    <div id="drawer" class="fixed bottom-0 left-0 right-0 z-[2000] bg-white rounded-t-[40px] shadow-[0_-15px_50px_rgba(0,0,0,0.15)] px-8 pt-4 pb-12 transition-all duration-500 drawer-hidden border-t border-gray-100">
-        <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8 cursor-pointer" onclick="closeDrawer()"></div>
+    <div id="drawer" class="fixed bottom-0 left-0 right-0 z-[2000] bg-white rounded-t-[40px] shadow-[0_-15px_50px_rgba(0,0,0,0.15)] px-8 pt-4 pb-12 transition-all duration-500 border-t border-gray-100">
+        <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8 cursor-pointer"></div>
         <div id="drawer-content">
             <div class="flex justify-between items-center text-center">
                 <div class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-amber-400 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-amber-100">🧭</div><span class="text-xs font-black">探索</span></div>
@@ -67,125 +72,56 @@
         </div>
     </div>
 
-    <div id="capture-page" class="fixed inset-0 bg-white overflow-y-auto px-6 py-12 hidden z-[4000]">
-        <div class="flex justify-between items-center mb-10">
-            <button onclick="closeCapture()" class="text-gray-300 font-bold">✕ 取消</button>
-            <h2 class="text-xl font-black italic tracking-tighter text-emerald-600 uppercase">New Moment</h2>
-            <div class="w-10"></div>
-        </div>
-        <div class="max-w-md mx-auto space-y-8">
-            <div class="bg-emerald-50 p-5 rounded-[24px] border border-emerald-100 flex items-center gap-4">
-                <span class="text-3xl">👶</span>
-                <div>
-                    <p class="text-[10px] text-emerald-600 font-black uppercase tracking-widest">紀錄主角</p>
-                    <p class="font-black text-gray-800 text-lg">小幸運 Lucky</p>
-                </div>
-            </div>
-            <div>
-                <label class="block text-sm font-black mb-4">📸 影像存檔</label>
-                <div onclick="document.getElementById('file-input').click()" id="upload-box" class="w-full h-60 bg-gray-50 border-4 border-dashed border-gray-100 rounded-[32px] flex flex-col items-center justify-center gap-3 text-gray-400 active:scale-95 transition-all">
-                    <span class="text-4xl" id="upload-icon">➕</span>
-                    <span class="text-sm font-black text-gray-300">加入照片或影片</span>
-                    <input type="file" id="file-input" class="hidden" onchange="checkUpload()">
-                </div>
-            </div>
-            <div>
-                <label class="block text-sm font-black mb-4">✍️ 此刻的心情文字</label>
-                <textarea id="mood-text" class="w-full bg-gray-50 rounded-[24px] p-6 border-none focus:ring-2 focus:ring-emerald-400 min-h-[150px] shadow-inner" placeholder="這段時光有什麼特別的意義..."></textarea>
-            </div>
-            <button onclick="finishCapture()" class="w-full bg-gray-900 text-white py-6 rounded-[24px] font-black shadow-2xl active:scale-95 transition-all text-xl">確認送出</button>
-        </div>
-    </div>
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 初始化地圖
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([48.8566, 2.3522], 15);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-        // 點擊地圖空白處收回抽屜 (回歸預設架構)
-        map.on('click', resetDrawer);
+        let facilityLayer = L.layerGroup().addTo(map);
+        let currentType = null; // 紀錄當前選取的標籤類型
 
-        let eventLayer = L.layerGroup().addTo(map);
-        const events = [
-            { id: 101, name: "🎨 羅浮宮：小小藝術家", time: "2026.02.04 (三) 14:00", summary: "在名畫前刻畫第一道美學印記。", lat: 48.8606, lon: 2.3376, location: "Musée du Louvre" },
-            { id: 102, name: "🎈 杜樂麗：週末嘉年華", time: "每週六、日 10:00 - 18:00", summary: "捕捉孩子最純真燦爛的笑容。", lat: 48.8640, lon: 2.3270, location: "Jardin des Tuileries" }
-        ];
+        // ✅ 當地圖移動停止時，顯示「搜尋此區域」按鈕
+        map.on('moveend', () => {
+            if (currentType) {
+                document.getElementById('re-search-btn').style.display = 'flex';
+            }
+        });
 
-        function renderEvents() {
-            events.forEach(evt => {
-                const icon = L.divIcon({ className: '', html: `<div class="event-marker">✨</div>`, iconSize: [38, 38] });
-                L.marker([evt.lat, evt.lon], { icon }).addTo(eventLayer).on('click', (e) => {
-                    L.DomEvent.stopPropagation(e);
-                    openEventDetail(evt);
+        // ✅ 核心搜尋功能
+        async function updateFacilities(type, btn) {
+            currentType = type;
+            
+            // 處理標籤變色
+            document.querySelectorAll('.facility-tag').forEach(t => t.classList.remove('tag-active'));
+            if (btn) btn.classList.add('tag-active');
+
+            // 隱藏重新搜尋按鈕
+            document.getElementById('re-search-btn').style.display = 'none';
+
+            // 執行資料抓取
+            const bounds = map.getBounds();
+            const query = `[out:json];node["amenity"="${type}"](${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()});out;`;
+            
+            try {
+                const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                facilityLayer.clearLayers();
+                data.elements.forEach(el => {
+                    const icon = L.divIcon({ className: 'facility-dot', iconSize: [12, 12] });
+                    L.marker([el.lat, el.lon], { icon }).addTo(facilityLayer);
                 });
-            });
-        }
-
-        function openEventDetail(evt) {
-            const drawer = document.getElementById('drawer');
-            document.getElementById('drawer-content').innerHTML = `
-                <div class="animate-fade-in">
-                    <p class="text-emerald-500 font-black text-sm mb-2 italic">🕒 ${evt.time}</p>
-                    <h3 class="text-3xl font-black text-gray-900 leading-tight mb-3">${evt.name}</h3>
-                    <p class="text-gray-500 text-sm font-medium leading-relaxed mb-8">${evt.summary}</p>
-                    <div class="flex items-center gap-2 mb-8 text-[10px] font-black text-gray-400 tracking-widest bg-gray-50 p-3 rounded-xl uppercase">
-                        📍 ${evt.location} <span class="ml-auto text-emerald-600">⛅ 8°C</span>
-                    </div>
-                    <div class="flex gap-4">
-                        <button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${evt.lat},${evt.lon}')" class="flex-1 border-2 border-gray-100 py-5 rounded-[24px] font-black text-gray-700 active:bg-gray-50 transition-colors">如何前往</button>
-                        <button onclick="goToCapture()" class="flex-[1.5] bg-emerald-500 text-white py-5 rounded-[24px] font-black shadow-lg shadow-emerald-100 active:scale-95 transition-all">我要採集</button>
-                    </div>
-                </div>
-            `;
-            drawer.classList.replace('drawer-hidden', 'drawer-visible');
-            map.flyTo([evt.lat, evt.lon], 16);
-        }
-
-        function resetDrawer() {
-            // 點擊空白處不只是收起來，而是回到原本的 4 分頁導航列
-            const drawer = document.getElementById('drawer');
-            document.getElementById('drawer-content').innerHTML = `
-                <div class="flex justify-between items-center text-center">
-                    <div class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-amber-400 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-amber-100">🧭</div><span class="text-xs font-black">探索</span></div>
-                    <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🛒</div><span class="text-xs font-black">支援</span></div>
-                    <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🔧</div><span class="text-xs font-black">貢獻</span></div>
-                    <div class="flex flex-col items-center gap-2 opacity-30 grayscale"><div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🧧</div><span class="text-xs font-black">其他</span></div>
-                </div>
-            `;
-            // 如果要完全收起，可以使用 drawer.classList.replace('drawer-visible', 'drawer-hidden');
-        }
-
-        function closeDrawer() { document.getElementById('drawer').classList.replace('drawer-visible', 'drawer-hidden'); }
-        function goToCapture() { document.getElementById('capture-page').classList.remove('hidden'); }
-        function closeCapture() { document.getElementById('capture-page').classList.add('hidden'); }
-
-        function checkUpload() {
-            const file = document.getElementById('file-input').files[0];
-            if(file) {
-                document.getElementById('upload-box').classList.add('bg-emerald-50', 'border-emerald-200');
-                document.getElementById('upload-icon').innerText = "✅";
+            } catch (e) {
+                console.error("抓取失敗", e);
             }
         }
 
-        function finishCapture() {
-            const file = document.getElementById('file-input').files[0];
-            const mood = document.getElementById('mood-text').value;
-
-            if (!file) { alert("無法成功：您尚未加入這段時光的照片或影片。"); return; }
-            if (!mood.trim()) { alert("無法成功：心情文字欄位還空空的，寫下一些紀念吧！"); return; }
-
-            alert("採集成功！");
-            closeCapture();
-            resetDrawer();
+        // 手動觸發搜尋
+        function triggerManualSearch() {
+            updateFacilities(currentType, null);
         }
 
-        window.onload = () => { 
-            renderEvents(); 
-            map.locate({ setView: true }); 
-            // 初始顯示導航列
-            document.getElementById('drawer').classList.replace('drawer-hidden', 'drawer-visible');
-        };
+        window.onload = () => { map.locate({ setView: true }); };
     </script>
 </body>
 </html>
