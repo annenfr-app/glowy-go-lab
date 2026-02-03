@@ -3,175 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Glowy GO ! | 帶寶寶也能出門去玩</title>
-    
+    <title>Glowy GO !</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-
     <style>
-        body { font-family: 'Noto Sans TC', sans-serif; }
-        #map { height: 100vh; width: 100vw; z-index: 1; }
-        
+        body { font-family: 'Noto Sans TC', sans-serif; overflow: hidden; }
+        #map { height: 100vh; width: 100vw; z-index: 1; background: #f8f9fa; }
         .bg-amber-primary { background-color: #FFBF00; }
-        .text-amber-primary { color: #FFBF00; }
-        
-        /* 隱藏 Leaflet 預設元件 */
         .leaflet-control-zoom { display: none !important; }
-        .leaflet-bottom.leaflet-right { display: none; }
-
-        /* 浮動泡泡樣式 */
-        .bubble-popup .leaflet-popup-content-wrapper {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 24px;
-            padding: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-        .bubble-popup .leaflet-popup-tip { display: none; }
-
-        /* 琥珀活動點 (Amber) */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* 琥珀活動點 */
         .amber-dot {
-            width: 18px; height: 18px;
+            width: 20px; height: 20px;
             background: #FFBF00;
             border: 3px solid white;
             border-radius: 50%;
             box-shadow: 0 0 12px rgba(255,191,0,0.8);
         }
-        /* 透明小黃點 (Facilities) */
+        /* OpenData 設施小黃點 */
         .facility-dot {
-            width: 10px; height: 10px;
-            background: rgba(255, 223, 0, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.8);
+            width: 8px; height: 8px;
+            background: rgba(255, 191, 0, 0.5);
             border-radius: 50%;
+            border: 1px solid white;
         }
-
-        /* 隱藏捲軸 */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-gray-50 overflow-hidden">
+<body class="bg-gray-50">
 
     <div class="fixed top-4 left-0 right-0 z-[1000] px-4 flex items-center gap-3">
-        <div class="flex-grow bg-white h-12 rounded-full shadow-lg flex items-center px-4 gap-3 cursor-pointer border border-gray-100 active:scale-[0.98] transition-all" onclick="openSearch()">
+        <div class="flex-grow bg-white h-12 rounded-full shadow-lg flex items-center px-4 gap-3 cursor-pointer border border-gray-100" onclick="alert('SNCF 搜尋次頁')">
             <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            <span class="text-gray-400 text-sm font-medium">要去哪裡玩？(區域、日期...)</span>
+            <span class="text-gray-400 text-sm font-medium">要去哪裡玩？</span>
         </div>
-        
-        <div id="member-avatar" class="w-12 h-12 bg-amber-50 rounded-full shadow-lg border-2 border-white flex items-center justify-center overflow-hidden cursor-pointer active:ring-4 ring-amber-200 transition-all" onclick="toggleMenu('member')">
-            <img id="avatar-img" src="https://api.dicebear.com/7.x/adventurer/svg?seed=Buddy" alt="User Avatar" class="w-full h-full object-cover">
+        <div class="w-12 h-12 bg-amber-50 rounded-full shadow-lg border-2 border-white flex items-center justify-center overflow-hidden">
+            <img id="avatar-img" src="https://api.dicebear.com/7.x/adventurer/svg?seed=Lucky" class="w-full h-full object-cover">
         </div>
     </div>
 
     <div class="fixed top-20 left-0 right-0 z-[1000] flex gap-2 px-4 overflow-x-auto no-scrollbar">
-        <button class="flex-shrink-0 px-4 py-2 bg-white/90 backdrop-blur rounded-full shadow-sm text-xs font-bold border border-gray-200 active:bg-amber-50 text-gray-700">🍼 哺乳室</button>
-        <button class="flex-shrink-0 px-4 py-2 bg-white/90 backdrop-blur rounded-full shadow-sm text-xs font-bold border border-gray-200 active:bg-amber-50 text-gray-700">🚾 公廁</button>
-        <button class="flex-shrink-0 px-4 py-2 bg-white/90 backdrop-blur rounded-full shadow-sm text-xs font-bold border border-gray-200 active:bg-amber-50 text-gray-700">💧 飲水機</button>
-        <button class="flex-shrink-0 px-4 py-2 bg-white/90 backdrop-blur rounded-full shadow-sm text-xs font-bold border border-gray-200 active:bg-amber-50 text-gray-700">🛗 電梯</button>
+        <button onclick="fetchOpenData('baby_care')" class="flex-shrink-0 px-4 py-2 bg-white/90 backdrop-blur rounded-full shadow-sm text-xs font-bold border border-gray-200 active:bg-amber-100">🍼 哺乳室</button>
+        <button onclick="fetchOpenData('toilets')" class="flex-shrink-0 px-4 py-2 bg-white/90 backdrop-blur rounded-full shadow-sm text-xs font-bold border border-gray-200 active:bg-amber-100">🚾 公廁</button>
+        <button onclick="fetchOpenData('drinking_water')" class="flex-shrink-0 px-4 py-2 bg-white/90 backdrop-blur rounded-full shadow-sm text-xs font-bold border border-gray-200 active:bg-amber-100">💧 飲水機</button>
     </div>
 
-    <div id="map"></div>
-
-    <button class="fixed right-6 bottom-32 z-[1000] w-12 h-12 bg-white rounded-full shadow-xl flex items-center justify-center text-gray-600 active:text-amber-500 transition-colors" onclick="locateUser()">
+    <button class="fixed right-6 top-36 z-[1000] w-12 h-12 bg-white rounded-full shadow-xl flex items-center justify-center text-gray-600 active:text-amber-500 transition-all" onclick="locateUser()">
         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
     </button>
 
-    <div class="fixed bottom-0 left-0 right-0 z-[2000] bg-white rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.08)] px-8 pt-4 pb-10">
+    <div id="map"></div>
+
+    <div class="fixed bottom-0 left-0 right-0 z-[2000] bg-white rounded-t-[32px] shadow-[0_-10px_30px_rgba(0,0,0,0.1)] px-8 pt-4 pb-10">
         <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
         <div class="flex justify-between items-center text-center">
-            <div class="flex flex-col items-center gap-1 group cursor-pointer">
-                <div class="p-2 bg-amber-100 rounded-2xl text-amber-600 mb-1">🧭</div>
-                <span class="text-xs font-bold text-gray-800">探索</span>
-            </div>
-            <div class="flex flex-col items-center gap-1 opacity-40 grayscale group cursor-pointer">
-                <div class="p-2 mb-1 text-xl">🛒</div>
-                <span class="text-xs font-bold">周邊支援</span>
-            </div>
-            <div class="flex flex-col items-center gap-1 opacity-40 grayscale group cursor-pointer">
-                <div class="p-2 mb-1 text-xl">🔧</div>
-                <span class="text-xs font-bold">貢獻</span>
-            </div>
-            <div class="flex flex-col items-center gap-1 opacity-40 grayscale group cursor-pointer">
-                <div class="p-2 mb-1 text-xl">🧧</div>
-                <span class="text-xs font-bold">其他</span>
-            </div>
+            <div class="flex flex-col items-center gap-1"><div class="p-2 bg-amber-100 rounded-2xl text-amber-600 mb-1">🧭</div><span class="text-xs font-bold text-gray-800">探索</span></div>
+            <div class="flex flex-col items-center gap-1 opacity-40 grayscale"><div class="p-2 mb-1 text-xl">🛒</div><span class="text-xs font-bold">周邊支援</span></div>
+            <div class="flex flex-col items-center gap-1 opacity-40 grayscale"><div class="p-2 mb-1 text-xl">🔧</div><span class="text-xs font-bold">貢獻</span></div>
+            <div class="flex flex-col items-center gap-1 opacity-40 grayscale"><div class="p-2 mb-1 text-xl">🧧</div><span class="text-xs font-bold">其他</span></div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 初始化地圖 (台北)
-        const map = L.map('map', {
-            zoomControl: false,
-            attributionControl: false
-        }).setView([25.0339, 121.5644], 16);
+        // 初始化地圖：預設中心點 (若未定位)
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([25.0339, 121.5644], 15);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
 
-        // 使用乾淨底圖
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19
-        }).addTo(map);
+        let facilityLayers = L.layerGroup().addTo(map);
 
-        // 模擬：貼圖隨機化 (如果會員沒照片)
-        const stickers = ['Lucky', 'Scooter', 'Snuggles', 'Daisy', 'Mochi'];
-        const randomSeed = stickers[Math.floor(Math.random() * stickers.length)];
-        document.getElementById('avatar-img').src = `https://api.dicebear.com/7.x/adventurer/svg?seed=${randomSeed}`;
-
-        // 數據：活動
-        const activities = [
-            { id: 1, lat: 25.036, lng: 121.566, name: "信義親子館閱覽會", age: "0-3歲" },
-            { id: 2, lat: 25.032, lng: 121.562, name: "草地泡泡藝術節", age: "2-6歲" }
-        ];
-
-        // 數據：設施
-        const facilities = [
-            { lat: 25.0345, lng: 121.564 }, { lat: 25.0330, lng: 121.565 },
-            { lat: 25.0355, lng: 121.561 }, { lat: 25.0315, lng: 121.567 }
-        ];
-
-        // 渲染黃點設施
-        facilities.forEach(f => {
-            L.marker([f.lat, f.lng], {
-                icon: L.divIcon({ className: 'facility-dot', iconSize: [10, 10] })
-            }).addTo(map);
-        });
-
-        // 渲染活動與泡泡
-        activities.forEach(a => {
-            const marker = L.marker([a.lat, a.lng], {
-                icon: L.divIcon({ className: 'amber-dot', iconSize: [18, 18] })
-            }).addTo(map);
-
-            const popupContent = `
-                <div class="w-48 p-2">
-                    <div class="text-[10px] text-amber-500 font-bold tracking-wider mb-1 uppercase">Recommended</div>
-                    <h3 class="font-bold text-gray-900 text-lg mb-0.5">${a.name}</h3>
-                    <p class="text-xs text-gray-500 mb-4">👶 適合 ${a.age} | 🌤 24°C</p>
-                    <div class="flex gap-2">
-                        <button class="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl text-xs font-bold" onclick="alert('導航開啟')">前往</button>
-                        <button class="flex-1 bg-amber-primary text-white py-2.5 rounded-xl text-xs font-black shadow-md shadow-amber-200" onclick="alert('開啟採集介面...')">採集寶物</button>
-                    </div>
-                </div>
-            `;
-
-            marker.bindPopup(popupContent, {
-                className: 'bubble-popup',
-                closeButton: false,
-                offset: [0, -10]
-            });
-        });
-
+        // A. 定位邏輯：優先嘗試自動定位
         function locateUser() {
-            map.locate({setView: true, maxZoom: 17});
+            map.locate({setView: true, maxZoom: 16, enableHighAccuracy: true});
         }
 
-        function openSearch() {
-            alert("進入 SNCF 搜尋頁：區域、日期、隨行寶寶選擇");
+        map.on('locationfound', (e) => {
+            L.circle(e.latlng, {radius: 200, color: '#FFBF00', fillOpacity: 0.1}).addTo(map);
+            // 當定位成功，載入方圓 10km 內的 OpenData (此 API 建議用當前視野 Bounding Box 效能最佳)
+            fetchOpenData('baby_care'); 
+        });
+
+        map.on('locationerror', () => {
+            alert("請開啟 GPS 定位授權，以獲得最佳育兒地圖體驗！");
+        });
+
+        // B. 全球 OpenData 介接 (Overpass API)
+        async function fetchOpenData(type) {
+            facilityLayers.clearLayers();
+            const bounds = map.getBounds();
+            const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
+            
+            // 根據標籤決定 OSM 查詢語句
+            let queryTag = "";
+            if(type === 'baby_care') queryTag = 'node["amenity"="baby_hatch"]'; // 或 "changing_table"
+            if(type === 'toilets') queryTag = 'node["amenity"="toilets"]';
+            if(type === 'drinking_water') queryTag = 'node["amenity"="drinking_water"]';
+
+            const url = `https://overpass-api.de/api/interpreter?data=[out:json];${queryTag}(${bbox});out;`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                data.elements.forEach(el => {
+                    L.marker([el.lat, el.lon], {
+                        icon: L.divIcon({ className: 'facility-dot', iconSize: [8, 8] })
+                    }).bindPopup(type).addTo(facilityLayers);
+                });
+            } catch (error) {
+                console.error("OpenData 載入失敗", error);
+            }
         }
 
-        function toggleMenu(type) {
-            alert("開啟會員選單：生命史感、琥珀點數、隨行清單");
-        }
+        // 頁面載入後立即請求定位
+        window.onload = () => {
+            locateUser();
+            const stickers = ['Lucky', 'Scooter', 'Mochi'];
+            document.getElementById('avatar-img').src = `https://api.dicebear.com/7.x/adventurer/svg?seed=${stickers[Math.floor(Math.random()*3)]}`;
+        };
     </script>
 </body>
 </html>
