@@ -8,29 +8,35 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;900&display=swap" rel="stylesheet">
     <style>
-        * { font-family: -apple-system, system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+        * { font-family: -apple-system, system-ui, "Noto Sans TC", sans-serif; -webkit-tap-highlight-color: transparent; }
         html, body { height: 100vh; width: 100vw; margin: 0; padding: 0; overflow: hidden; background: #f8fafc; }
         #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%; height: 100%; z-index: 1; }
 
-        /* 極簡精緻 UI */
+        /* UI 層級：極簡透明 */
         .ui-layer { z-index: 1001 !important; pointer-events: none; }
         .ui-layer * { pointer-events: auto; }
-        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .glass { background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 4px 15px rgba(0,0,0,0.06); }
 
-        .search-bar { height: 46px; border-radius: 14px; padding: 0 16px; margin-top: 10px; }
+        /* 修正標籤間距 */
+        .search-bar { height: 44px; border-radius: 14px; padding: 0 16px; margin-top: 10px; }
+        .tag-container { margin-top: 8px; gap: 6px; }
+        .tag { padding: 6px 14px; font-size: 13px; border-radius: 99px; background: white; font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,0.04); color: #475569; border: 1px solid #f1f5f9; white-space: nowrap; }
+        .tag-active { background: #FFBF00; color: white; border-color: #FFBF00; }
+
+        /* 定位點 */
+        .user-dot { width: 16px; height: 16px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(59,130,246,0.5); }
+
+        /* 修正重點：移除方框，改為純圓形星星 */
+        .leaflet-marker-icon { background: none !important; border: none !important; }
+        .event-marker { 
+            width: 46px; height: 46px; background: #10B981; border: 3px solid white; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; font-size: 24px; 
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+            animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
         
-        .tag-container { margin-top: 10px; gap: 8px; padding-bottom: 5px; }
-        .tag { padding: 7px 16px; font-size: 13px; border-radius: 99px; background: white; font-weight: 700; box-shadow: 0 2px 10px rgba(0,0,0,0.05); color: #475569; border: 1px solid #f1f5f9; white-space: nowrap; transition: 0.2s; }
-        .tag-active { background: #FFBF00; color: white; border-color: #FFBF00; transform: scale(1.05); }
-
-        /* 定位點動畫 */
-        .user-dot { width: 18px; height: 18px; background: #3B82F6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 15px rgba(59,130,246,0.6); }
-
-        /* 噴發特效 */
-        .event-marker { width: 44px; height: 44px; background: #10B981; border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4); animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes pop { from { transform: scale(0) rotate(-20deg); } to { transform: scale(1) rotate(0); } }
-        
-        #search-this-area { position: fixed; top: 125px; left: 50%; transform: translateX(-50%); padding: 8px 22px; border-radius: 99px; font-weight: 800; font-size: 13px; display: none; z-index: 1002; background: white; color: #1e293b; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        #search-this-area { position: fixed; top: 120px; left: 50%; transform: translateX(-50%); padding: 8px 18px; border-radius: 99px; font-weight: 800; font-size: 12px; display: none; z-index: 1002; background: white; color: #1e293b; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -43,9 +49,9 @@
             <div class="flex-grow glass search-bar flex items-center gap-3">
                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="3"></path></svg>
                 <input id="search-input" type="text" readonly class="bg-transparent border-none focus:ring-0 text-sm w-full font-bold text-gray-700 outline-none">
-                <div id="weather-box" class="flex items-center gap-1 border-l pl-3 text-xs font-bold text-blue-500 whitespace-nowrap">12°C ☀️</div>
+                <div id="weather-box" class="flex items-center gap-1 border-l pl-3 text-xs font-bold text-blue-500">12°C ☀️</div>
             </div>
-            <div class="w-11 h-11 mt-2 rounded-2xl glass border-2 border-white overflow-hidden shadow-sm">
+            <div class="w-11 h-11 mt-2 rounded-xl glass border-2 border-white overflow-hidden shadow-sm">
                 <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Lucky" class="w-full h-full">
             </div>
         </div>
@@ -56,49 +62,64 @@
         <span id="search-btn-text">Rechercher ici</span>
     </button>
 
-    <button onclick="reCenter()" class="fixed bottom-40 right-5 w-12 h-12 bg-white rounded-full shadow-2xl flex items-center justify-center z-[1002] active:scale-90 border border-gray-100">
+    <button onclick="reCenter()" class="fixed bottom-44 right-5 w-12 h-12 bg-white rounded-full shadow-xl flex items-center justify-center z-[1002] active:scale-90 border border-gray-50">
         <svg class="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
     </button>
 
-    <div id="drawer" class="fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] shadow-[0_-15px_50px_rgba(0,0,0,0.1)] z-[2000] px-6 pt-3 pb-10 transition-transform duration-500 transform translate-y-0">
-        <div class="w-12 h-1.5 bg-gray-100 rounded-full mx-auto mb-8" onclick="toggleDrawer()"></div>
+    <div id="drawer" class="fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-[2000] px-6 pt-3 pb-10 transition-transform duration-500 transform translate-y-0">
+        <div class="w-10 h-1.5 bg-gray-100 rounded-full mx-auto mb-8" onclick="toggleDrawer()"></div>
         <div id="drawer-content">
             <div class="flex justify-between items-center px-4">
                 <div onclick="startDiscovery()" class="flex flex-col items-center gap-2">
-                    <div id="explore-icon" class="w-15 h-15 bg-amber-400 rounded-2xl flex items-center justify-center text-3xl shadow-lg text-white transition-all">🧭</div>
+                    <div id="explore-icon" class="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center text-3xl shadow-lg text-white">🧭</div>
                     <span class="text-[11px] font-bold text-gray-800" id="nav-explore">Explorer</span>
                 </div>
-                <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-15 h-15 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl">🛒</div><span class="text-[11px] font-bold text-gray-800">Shop</span></div>
-                <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-15 h-15 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl">⚙️</div><span class="text-[11px] font-bold text-gray-800">Outils</span></div>
-                <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-15 h-15 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl">🧧</div><span class="text-[11px] font-bold text-gray-800">Plus</span></div>
+                <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl">🛒</div><span class="text-[11px] font-bold text-gray-800" id="nav-shop">Shop</span></div>
+                <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl">⚙️</div><span class="text-[11px] font-bold text-gray-800" id="nav-tools">Outils</span></div>
+                <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl">🧧</div><span class="text-[11px] font-bold text-gray-800" id="nav-more">Plus</span></div>
             </div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 絕對法文優先邏輯 (除非設定為 zh)
-        const getLKey = () => {
-            const lang = (navigator.language || 'fr').toLowerCase();
-            return lang.includes('zh') ? 'zh' : 'fr';
+        // 強化版語系偵測
+        const getLang = () => {
+            const browserLang = (navigator.language || 'fr').toLowerCase();
+            return browserLang.includes('zh') ? 'zh' : 'fr';
         };
-        const LKey = getLKey();
+        const LKey = getLang();
 
         const i18n = {
-            fr: { search: "Où aller jouer ?", baby: "🍼 Bébé", toilet: "🚾 Toilettes", water: "💧 Eau", searchArea: "Rechercher ici", explore: "Explorer", collect: "Récolter ✨", success: "Récolté !", nav: "Navigation", friendly: "✅ Poussette OK", acts: ["Atelier à Bouffémont", "Parcours Nature", "Conte en Forêt", "Pause Goûter"] },
-            zh: { search: "要去哪裡玩？", baby: "🍼 哺乳室", toilet: "🚾 公廁", water: "💧 飲水機", searchArea: "搜尋此區域", explore: "探索", collect: "我要採集 ✨", success: "採集成功！", nav: "如何前往", friendly: "✅ 推車友善", acts: ["Bouffémont 工作坊", "自然探索趣", "森林故事會", "點心時光"] }
+            fr: { 
+                search: "Où aller jouer ?", baby: "🍼 Bébé", toilet: "🚾 Toilettes", water: "💧 Eau", 
+                searchArea: "Rechercher ici", explore: "Explorer", shop: "Boutique", tools: "Outils", more: "Plus",
+                collect: "Récolter ✨", success: "Récolté !", nav: "Y aller",
+                tag1: "✅ Poussette OK", tag2: "🍼 Salle d'allaitement",
+                acts: ["Atelier à Bouffémont", "Parcours Nature", "Conte en Forêt", "Pause Goûter"]
+            },
+            zh: { 
+                search: "要去哪裡玩？", baby: "🍼 哺乳室", toilet: "🚾 公廁", water: "💧 飲水機", 
+                searchArea: "搜尋此區域", explore: "探索", shop: "商店", tools: "工具盒", more: "更多",
+                collect: "我要採集 ✨", success: "採集成功！", nav: "如何前往",
+                tag1: "✅ 推車友善空間", tag2: "🍼 設有哺乳室",
+                acts: ["Bouffémont 工作坊", "自然探索趣", "森林故事會", "點心時光"]
+            }
         }[LKey];
 
+        // 強制初始化文字
         document.getElementById('search-input').value = i18n.search;
         document.getElementById('search-btn-text').innerText = i18n.searchArea;
         document.getElementById('nav-explore').innerText = i18n.explore;
+        document.getElementById('nav-shop').innerText = i18n.shop;
+        document.getElementById('nav-tools').innerText = i18n.tools;
+        document.getElementById('nav-more').innerText = i18n.more;
         document.getElementById('tag-container').innerHTML = `
             <button onclick="toggleTag('baby_care', this)" class="tag">${i18n.baby}</button>
             <button onclick="toggleTag('toilets', this)" class="tag">${i18n.toilet}</button>
             <button onclick="toggleTag('drinking_water', this)" class="tag">${i18n.water}</button>
         `;
 
-        // 初始中心點設在 Bouffémont
         var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([49.034, 2.302], 15);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
@@ -106,38 +127,32 @@
         var userLayer = L.layerGroup().addTo(map);
         var userLatLng = null;
 
-        function updateLocation() {
-            map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true });
-        }
-
+        map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true, watch: true });
         map.on('locationfound', (e) => {
             userLatLng = e.latlng;
             userLayer.clearLayers();
-            L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot', iconSize: [18, 18] }), zIndexOffset: 2000 }).addTo(userLayer);
+            L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot', iconSize: [16, 16] }), zIndexOffset: 2000 }).addTo(userLayer);
         });
 
-        updateLocation();
-        function reCenter() { if(userLatLng) map.flyTo(userLatLng, 16); else updateLocation(); }
+        function reCenter() { if(userLatLng) map.flyTo(userLatLng, 16); }
 
-        // 探索與噴發
         function startDiscovery() {
             document.getElementById('search-this-area').style.display = 'none';
             const center = map.getCenter();
             const icon = document.getElementById('explore-icon');
-            icon.style.transform = "rotate(360deg) scale(1.2)";
+            icon.style.transform = "scale(1.2) rotate(360deg)";
             
             setTimeout(() => {
-                icon.style.transform = "rotate(0deg) scale(1)";
+                icon.style.transform = "scale(1) rotate(0)";
                 eventLayer.clearLayers();
                 for(let i=0; i<4; i++) {
                     const evt = {
                         name: i18n.acts[i],
-                        lat: center.lat + (Math.random()-0.5)*0.01,
-                        lon: center.lng + (Math.random()-0.5)*0.01,
-                        friendly: i18n.friendly
+                        lat: center.lat + (Math.random()-0.5)*0.008,
+                        lon: center.lng + (Math.random()-0.5)*0.008
                     };
                     L.marker([evt.lat, evt.lon], { 
-                        icon: L.divIcon({ html: `<div class="event-marker">✨</div>`, iconSize: [44, 44] }),
+                        icon: L.divIcon({ className: '', html: `<div class="event-marker">✨</div>`, iconSize: [46, 46] }),
                         zIndexOffset: 1000 
                     }).addTo(eventLayer).on('click', () => openEventDetail(evt));
                 }
@@ -147,11 +162,14 @@
         function openEventDetail(evt) {
             document.getElementById('drawer').style.transform = "translateY(0)";
             document.getElementById('drawer-content').innerHTML = `
-                <div class="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div class="animate-in fade-in slide-in-from-bottom-4">
                     <h3 class="text-2xl font-black text-slate-800 mb-2">${evt.name}</h3>
-                    <div class="inline-block bg-emerald-50 text-emerald-600 px-3 py-1 rounded-lg text-xs font-bold mb-8">${evt.friendly}</div>
+                    <div class="flex gap-2 mb-8">
+                        <span class="bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md text-[10px] font-bold">${i18n.tag1}</span>
+                        <span class="bg-blue-50 text-blue-600 px-2 py-1 rounded-md text-[10px] font-bold">${i18n.tag2}</span>
+                    </div>
                     <div class="flex gap-4">
-                        <button class="flex-1 py-4 bg-slate-100 rounded-2xl font-bold text-slate-500 text-sm">${i18n.nav}</button>
+                        <button class="flex-1 py-4 bg-slate-50 rounded-2xl font-bold text-slate-400 text-sm">${i18n.nav}</button>
                         <button onclick="collectSuccess()" class="flex-1 py-4 bg-amber-400 text-white rounded-2xl font-bold shadow-lg text-sm">${i18n.collect}</button>
                     </div>
                 </div>`;
@@ -162,10 +180,10 @@
         function resetDrawerUI() {
             document.getElementById('drawer-content').innerHTML = `
                 <div class="flex justify-between items-center px-4">
-                    <div onclick="startDiscovery()" class="flex flex-col items-center gap-2"><div class="w-15 h-15 bg-amber-400 rounded-2xl flex items-center justify-center text-3xl shadow-lg text-white">🧭</div><span class="text-[11px] font-bold text-gray-800">${i18n.explore}</span></div>
-                    <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-15 h-15 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl">🛒</div><span class="text-[11px] font-bold text-gray-800">Shop</span></div>
-                    <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-15 h-15 bg-gray-50 rounded-2xl flex items-center justify-center text-2xl">⚙️</div><span class="text-[11px] font-bold text-gray-800">Outils</span></div>
-                    <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-15 h-15 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl">🧧</div><span class="text-[11px] font-bold text-gray-800">Plus</span></div>
+                    <div onclick="startDiscovery()" class="flex flex-col items-center gap-2"><div class="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center text-3xl shadow-lg text-white">🧭</div><span class="text-[11px] font-bold text-gray-800">${i18n.explore}</span></div>
+                    <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl">🛒</div><span class="text-[11px] font-bold text-gray-800">${i18n.shop}</span></div>
+                    <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl">⚙️</div><span class="text-[11px] font-bold text-gray-800">${i18n.tools}</span></div>
+                    <div class="opacity-20 flex flex-col items-center gap-2"><div class="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl">🧧</div><span class="text-[11px] font-bold text-gray-800">${i18n.more}</span></div>
                 </div>`;
         }
 
@@ -175,24 +193,6 @@
         }
 
         map.on('dragend', () => { document.getElementById('search-this-area').style.display = 'block'; });
-
-        var facilityLayers = {};
-        async function toggleTag(type, btn) {
-            btn.classList.toggle('tag-active');
-            if (!btn.classList.contains('tag-active')) {
-                if (facilityLayers[type]) map.removeLayer(facilityLayers[type]);
-                return;
-            }
-            if (!facilityLayers[type]) facilityLayers[type] = L.layerGroup().addTo(map);
-            const b = map.getBounds();
-            const q = `[out:json];node["amenity"="${type}"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});out;`;
-            fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`)
-            .then(res => res.json()).then(data => {
-                data.elements.forEach(el => {
-                    L.circleMarker([el.lat, el.lon], { radius: 7, color: 'white', weight: 2, fillColor: '#3B82F6', fillOpacity: 1 }).addTo(facilityLayers[type]);
-                });
-            });
-        }
     </script>
 </body>
 </html>
