@@ -3,20 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Glowy GO ! - 育兒探險家</title>
+    <title>Glowy GO !</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;900&display=swap" rel="stylesheet">
     <style>
-        html, body { height: 100vh; width: 100vw; margin: 0; padding: 0; overflow: hidden; background: #f8f9fa; font-family: 'Noto Sans TC', sans-serif; }
-        #map { height: 100%; width: 100%; z-index: 1; outline: none; }
+        /* 最高等級的強制撐開，防止地圖變白 */
+        html, body { 
+            height: 100vh !important; 
+            width: 100vw !important; 
+            margin: 0; padding: 0; 
+            overflow: hidden; 
+            position: fixed; /* 防止手機瀏覽器橡皮筋回彈 */
+        }
+        #map { 
+            position: absolute;
+            top: 0; bottom: 0; left: 0; right: 0;
+            height: 100% !important; 
+            width: 100% !important; 
+            z-index: 1; 
+            background: #f0f0f0; /* 底色設為灰色，若沒載入會有視覺感 */
+        }
         
         .top-ui { z-index: 1001 !important; }
         .bottom-ui { z-index: 2000 !important; }
-
-        /* 標籤樣式 */
-        .facility-tag { padding: 6px 14px; font-size: 12px; border-radius: 99px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .tag-active { background-color: #FFBF00 !important; color: white !important; transform: translateY(-2px); shadow: 0 4px 12px rgba(255,191,0,0.3); }
+        
+        /* 標籤設計 */
+        .facility-tag { padding: 6px 14px; font-size: 12px; border-radius: 99px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .tag-active { background-color: #FFBF00 !important; color: white !important; transform: translateY(-2px); }
 
         /* GPS 藍點 */
         .user-location-dot { 
@@ -24,4 +38,6 @@
             border-radius: 50%; box-shadow: 0 0 15px rgba(59,130,246,0.7); 
         }
 
-        /* 活動神奇寶貝球
+        /* 活動 ✨ */
+        .event-marker {
+            width: 40px; height: 40px; background: #10B981; border: 3px solid white; border-radius
